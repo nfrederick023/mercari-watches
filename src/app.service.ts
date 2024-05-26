@@ -140,6 +140,16 @@ export class AppService implements OnModuleInit {
     const delayBetweenUpdatesMS = 90000; // every 90 seconds
     this.createWatchesIfNotExist();
     const newSeenIDs = [];
+    const userDataDir = "/dev/null";
+    const args = [
+      '--aggressive-cache-discard',
+      '--disable-cache',
+      '--disable-application-cache',
+      '--disable-offline-load-stale-cache',
+      '--disable-gpu-shader-disk-cache',
+      '--media-cache-size=0',
+      '--disk-cache-size=0'
+    ];
 
     while (true) {
       console.log(this.count);
@@ -151,17 +161,9 @@ export class AppService implements OnModuleInit {
         try {
 
           // we need to retrieve the mercari dpop token to utilize their search API
+          // there's a way to do it normally, but idk how so instead we use puppeteer hack
           // get the token through normal user flow by pulling up the search results page (any keyword will work)
-          const browser = await puppeteer.launch();
-          let chromeTmpDataDir: string;
-
-          // find chrome user data dir (puppeteer_dev_profile-XXXXX) to delete it after it had been used
-          const chromeSpawnArgs = browser.process().spawnargs;
-          for (let i = 0; i < chromeSpawnArgs.length; i++) {
-            if (chromeSpawnArgs[i].indexOf("--user-data-dir=") === 0) {
-              chromeTmpDataDir = chromeSpawnArgs[i].replace("--user-data-dir=", "");
-            }
-          }
+          const browser = await puppeteer.launch({ args, userDataDir });
 
           // help function to close all the pages and then the browser
           const closePuppeteer = async () => {
@@ -171,10 +173,7 @@ export class AppService implements OnModuleInit {
             }
 
             await browser.close();
-
-            if (chromeTmpDataDir !== null) {
-              fs.rmSync(chromeTmpDataDir, { recursive: true, force: true });
-            }
+            fs.rmSync(userDataDir, { recursive: true, force: true });
           }
 
           try {
