@@ -1,10 +1,15 @@
-import { Controller, Delete, Get, Post, Put, Query } from '@nestjs/common';
+import { Controller, Delete, Get, Post, Put, Query, Res } from '@nestjs/common';
 import { AppService } from './app.service';
 import { Watch } from './app.interfaces';
 
 @Controller()
 export class AppController {
   constructor(private readonly appService: AppService) { }
+
+  @Get("")
+  redirectToAPI(@Res() res): Watch[] {
+    return res.redirect('/api#');
+  }
 
   @Get("getWatches")
   getWatches(): Watch[] {
@@ -20,7 +25,6 @@ export class AppController {
   removeWatch(@Query('email') email: string): void {
     return this.appService.removeWatch(email);
   }
-
 
   @Put("addKeywordToWatch")
   addKeywordToWatch(@Query('email') email: string, @Query('keyword') keyword: string): void {

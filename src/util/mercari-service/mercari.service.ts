@@ -1,4 +1,5 @@
 import axios from "axios";
+import { MercariSearchRequest, MercariSearchResponse, SimpleMercariItem } from "./mercari.interfaces";
 
 
 const createMercariSearchRequest = (page: number, keyword: string): MercariSearchRequest => {

@@ -5,17 +5,33 @@ import * as nodemailer from 'nodemailer';
 import * as notifier from 'node-notifier';
 import puppeteer from 'puppeteer';
 import { Watch } from './app.interfaces';
-import { fromEmail, mailConfig } from './util/config/mail.config';
+import SMTPTransport from 'nodemailer/lib/smtp-transport';
+import { Config, readConfig } from './util/read-config';
+import { SimpleMercariItem } from './util/mercari-service/mercari.interfaces';
+
 
 @Injectable()
 export class AppService implements OnModuleInit {
-  private readonly watchesDirectory = 'src/util/storage/watches.json';
+  private readonly watchesDirectory = '/data/mercariwatch/watches.json';
   private seenIDs: string[] = [];
   private count = 0;
-  private transporter = nodemailer.createTransport(mailConfig);
+  private transporter: nodemailer.Transporter<SMTPTransport.SentMessageInfo>;
+  public config: Config;
 
   async onModuleInit() {
-    this.triggerWatchService();
+    this.config = readConfig();
+    if (this.config && this.config.auth) {
+      this.transporter = nodemailer.createTransport({
+        host: this.config.host,
+        port: this.config.port,
+        secure: this.config.secure,
+        auth: this.config.auth
+      });
+
+      this.triggerWatchService();
+    } else {
+      throw (new Error("Failed to retrieve mail config!"))
+    }
   }
 
   /**
@@ -103,7 +119,7 @@ export class AppService implements OnModuleInit {
   createWatchesIfNotExist(): void {
     this.seenIDs = [];
 
-    if (!this.doesWatchesExist) {
+    if (!this.doesWatchesExist()) {
       this.setBlankWatches();
     }
   }
@@ -121,7 +137,7 @@ export class AppService implements OnModuleInit {
     });
 
     const mailOptions = {
-      from: fromEmail,
+      from: this.config.fromEmail,
       to: email,
       subject: 'Mercari Watches: New Items are Avaliable!',
       text,
@@ -140,7 +156,7 @@ export class AppService implements OnModuleInit {
     const delayBetweenUpdatesMS = 90000; // every 90 seconds
     this.createWatchesIfNotExist();
     const newSeenIDs = [];
-    const userDataDir = "/dev/null";
+    const userDataDir = "./dev/null";
     const args = [
       '--aggressive-cache-discard',
       '--disable-cache',
@@ -148,7 +164,8 @@ export class AppService implements OnModuleInit {
       '--disable-offline-load-stale-cache',
       '--disable-gpu-shader-disk-cache',
       '--media-cache-size=0',
-      '--disk-cache-size=0'
+      '--disk-cache-size=0',
+      '--no-sandbox'
     ];
 
     while (true) {

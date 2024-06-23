@@ -1,0 +1,8 @@
+services:
+  mercariwatch:
+    container_name: mercariwatch
+    image: nfrederick023/mercariwatch:latest
+    ports:
+      - "3080:3080"
+    volumes:
+      - /data/mercariwatch:/data/mercariwatch

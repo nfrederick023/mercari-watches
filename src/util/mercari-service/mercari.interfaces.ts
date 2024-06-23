@@ -1,4 +1,4 @@
-interface MercariSearchRequest {
+export interface MercariSearchRequest {
   searchSessionId: string;
   searchCondition: MercariSearchCondition;
   pageSize?: number;
@@ -42,7 +42,7 @@ interface MercariSearchCondition {
   status?: string[];
 }
 
-interface MercariSearchResponse {
+export interface MercariSearchResponse {
   items: MercariSearchItem[];
   meta: MercariSearchMeta;
   components: string[];
@@ -78,7 +78,7 @@ interface MercariSearchItem {
   isNoPrice: boolean;
 }
 
-interface SimpleMercariItem {
+export interface SimpleMercariItem {
   id: string;
   name: string;
 }
