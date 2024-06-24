@@ -12,7 +12,7 @@ async function bootstrap() {
     throw (new Error("Username and Password not configured!"))
   }
 
-  app.use(['/api'], basicAuth({
+  app.use(['/api', '/public'], basicAuth({
     challenge: true,
     users: {
       [config.apiUser]: config.apiPassword,
@@ -25,7 +25,10 @@ async function bootstrap() {
     .setVersion('1.0')
     .build();
   const document = SwaggerModule.createDocument(app, swaggerConfig);
-  SwaggerModule.setup('api', app, document);
+  SwaggerModule.setup('api', app, document, {
+    customJs: './public/swagger-static.js',
+    customJsStr: `const vapidPublicKey = "${config.vapidKeys.publicKey}";`
+  });
 
   await app.listen(3080);
 }

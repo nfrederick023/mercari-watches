@@ -5,4 +5,4 @@ services:
     ports:
       - "3080:3080"
     volumes:
-      - /data/mercariwatch:/data/mercariwatch
+      - C:/data/mercariwatch:/data/mercariwatch

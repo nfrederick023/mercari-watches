@@ -1,4 +1,4 @@
-import { Injectable, NestMiddleware, OnModuleInit } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable, NestMiddleware, OnModuleInit } from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
 import { AppService } from './app.service';
 import { Config, readConfig } from './util/read-config';
@@ -17,8 +17,7 @@ export class AppMiddleware implements NestMiddleware, OnModuleInit {
       this.service.createWatchesIfNotExist();
       next();
     } else {
-      res.status(401);
-      res.end();
+      throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
     }
   }
 }

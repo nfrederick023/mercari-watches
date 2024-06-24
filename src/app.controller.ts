@@ -1,6 +1,7 @@
-import { Controller, Delete, Get, Post, Put, Query, Res } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpException, HttpStatus, Post, Put, Query, Res } from '@nestjs/common';
 import { AppService } from './app.service';
 import { Watch } from './app.interfaces';
+import * as webPush from 'web-push';
 
 @Controller()
 export class AppController {
@@ -14,6 +15,18 @@ export class AppController {
   @Get("getWatches")
   getWatches(): Watch[] {
     return this.appService.getWatches();
+  }
+
+  @Post("subscribe")
+  subscribe(@Query('email') email: string, @Body() subscription?: webPush.PushSubscription): void {
+    if (subscription)
+      return this.appService.subscribe(email, subscription);
+    throw new HttpException('Bad Request', HttpStatus.BAD_REQUEST);
+  }
+
+  @Put("unsubscribe")
+  unsubscribe(@Query('email') email: string): void {
+    return this.appService.unsubscribe(email);
   }
 
   @Post("createWatch")

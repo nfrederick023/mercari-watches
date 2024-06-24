@@ -2,13 +2,12 @@ import { Injectable, OnModuleInit } from '@nestjs/common';
 import * as fs from 'node:fs';
 import getLatestListings from './util/mercari-service/mercari.service';
 import * as nodemailer from 'nodemailer';
-import * as notifier from 'node-notifier';
 import puppeteer from 'puppeteer';
 import { Watch } from './app.interfaces';
 import SMTPTransport from 'nodemailer/lib/smtp-transport';
 import { Config, readConfig } from './util/read-config';
 import { SimpleMercariItem } from './util/mercari-service/mercari.interfaces';
-
+import * as webPush from 'web-push';
 
 @Injectable()
 export class AppService implements OnModuleInit {
@@ -16,11 +15,17 @@ export class AppService implements OnModuleInit {
   private seenIDs: string[] = [];
   private count = 0;
   private transporter: nodemailer.Transporter<SMTPTransport.SentMessageInfo>;
-  public config: Config;
+  private config: Config;
 
   async onModuleInit() {
     this.config = readConfig();
-    if (this.config && this.config.auth) {
+    if (this.config) {
+      webPush.setVapidDetails(
+        'mailto:' + this.config.fromEmail,
+        this.config.vapidKeys.publicKey,
+        this.config.vapidKeys.privateKey,
+      );
+
       this.transporter = nodemailer.createTransport({
         host: this.config.host,
         port: this.config.port,
@@ -50,10 +55,28 @@ export class AppService implements OnModuleInit {
     const watch: Watch = {
       email,
       keywords: [],
+      subscription: null
     };
 
     watches.push(watch);
+    this.saveWatches(watches);
+  }
 
+  subscribe(emailOfWatch: string, subscription: webPush.PushSubscription) {
+    const watches = this.getWatches();
+    const watchIndex = watches.findIndex(
+      (watch) => watch.email === emailOfWatch,
+    );
+    watches[watchIndex].subscription = subscription;
+    this.saveWatches(watches);
+  }
+
+  unsubscribe(emailOfWatch: string) {
+    const watches = this.getWatches();
+    const watchIndex = watches.findIndex(
+      (watch) => watch.email === emailOfWatch,
+    );
+    watches[watchIndex].subscription = null;
     this.saveWatches(watches);
   }
 
@@ -124,21 +147,34 @@ export class AppService implements OnModuleInit {
     }
   }
 
-  sendEmailAlert(email: string, matches: SimpleMercariItem[]): void {
+  sendNotifications(watch: Watch, matches: SimpleMercariItem[]): void {
     let text = 'One or more items were found that matched your keywords! \n';
 
     // check if the item is from Mercari or MercariShops
-    matches.forEach((match) => {
+    matches.forEach(async (match) => {
+      let link;
+
       if (match.id[0] === 'm') {
-        text += `\n\nItem Name: ${match.name} \nItem Link: https://jp.mercari.com/en/item/${match.id}`;
+        link = `https://jp.mercari.com/en/item/${match.id}`;
       } else {
-        text += `\n\nItem Name: ${match.name} \nItem Link: https://jp.mercari.com/en/shops/product/${match.id}`;
+        link = `https://jp.mercari.com/en/shops/product/${match.id}`;
+      }
+
+      text += `\n\nItem Name: ${match.name} \nItem Link: ${link}`
+
+      const payload = JSON.stringify({
+        title: 'Mercari Watches',
+        body: 'New Items!',
+        url: link
+      });
+      if (watch.subscription) {
+        await webPush.sendNotification(watch.subscription, payload);
       }
     });
 
     const mailOptions = {
       from: this.config.fromEmail,
-      to: email,
+      to: watch.email,
       subject: 'Mercari Watches: New Items are Avaliable!',
       text,
     };
@@ -233,16 +269,13 @@ export class AppService implements OnModuleInit {
 
         // if we got the token now we can make the actual search requests
         if (token) {
-
           // got through every watch, and each one of its search queries
           await Promise.all(
             watches.map(async (watch) => {
               const watchMatches: SimpleMercariItem[] = [];
-
               await Promise.all(
                 watch.keywords.map(async (keyword) => {
                   const listings = await getLatestListings(keyword, token);
-
                   // remove any listsings we already know about 
                   const newListings = listings.filter(
                     (item) => !this.seenIDs.includes(item.id),
@@ -261,13 +294,7 @@ export class AppService implements OnModuleInit {
               );
 
               if (watchMatches.length) {
-                notifier.notify({
-                  title: 'Mercari Watches',
-                  message: 'New Items',
-                  sound: "Notification.Looping.Alarm10"
-                });
-
-                this.sendEmailAlert(watch.email, watchMatches);
+                this.sendNotifications(watch, watchMatches);
               }
             }),
           );

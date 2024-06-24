@@ -11,6 +11,10 @@ export interface Config {
   }
   apiUser: string;
   apiPassword: string;
+  vapidKeys: {
+    publicKey: string;
+    privateKey: string;
+  }
 }
 
 export const readConfig = () => JSON.parse(fs.readFileSync("/data/mercariwatch/config.json", { encoding: "utf-8" })) as Config;

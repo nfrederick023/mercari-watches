@@ -3,9 +3,16 @@ import { MiddlewareConsumer, NestModule } from '@nestjs/common/interfaces';
 import { AppController } from './app.controller';
 import { AppMiddleware } from './app.middleware';
 import { AppService } from './app.service';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import * as path from 'node:path';
 
 @Module({
-  imports: [],
+  imports: [
+    ServeStaticModule.forRoot({
+      rootPath: path.join(__dirname, 'public'),
+      serveRoot: '/public',
+    })
+  ],
   controllers: [AppController],
   providers: [AppService],
 })
