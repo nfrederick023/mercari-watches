@@ -6,3 +6,4 @@ services:
       - "3080:3080"
     volumes:
       - C:/data/mercariwatch:/data/mercariwatch
+    restart: always
