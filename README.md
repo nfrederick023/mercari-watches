@@ -31,7 +31,7 @@ wget -O data/config.json https://raw.githubusercontent.com/nfrederick023/mercari
 docker compose up -d
 ```
 
-5. Begin using the application following the usage guide.
+5. Begin using the application following [the usage guide](https://github.com/nfrederick023/mercari-watches?tab=readme-ov-file#usage).
 
 ## Configuration
 
