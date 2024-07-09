@@ -31,7 +31,7 @@ wget -O data/config.json https://raw.githubusercontent.com/nfrederick023/mercari
 docker compose up -d
 ```
 
-5. Begin using the application following [the usage guide](https://github.com/nfrederick023/mercari-watches?tab=readme-ov-file#usage).
+5. Begin using the application [following the usage guide](https://github.com/nfrederick023/mercari-watches?tab=readme-ov-file#usage).
 
 ## Configuration
 
@@ -42,7 +42,7 @@ Mercari Watches uses two JSON files for configuration and user data management.
 
 `watches.json` is automatically generated and managed by the application. Ideally you'd only interact with this file when migrating systems, backing up/restoring data or for development. This file can be edited safely on fly; however, this is discouraged. The file is created and found in the same directory as `config.json`.
 
-`config.json` must be created and managed by you. Whilst the file itself (and every parameter therein) is **optional**, a correct configuration file is mandatory in order to secure API endpoints, send email notifications, and create browser notifications. The `config.json` should be located at the `[appDir]/data/config.json` directoy, and within it you can configure the following options:
+`config.json` must be created and managed by you. Whilst the file itself (and every parameter therein) is technically **optional**, a correct configuration file is mandatory in order to secure API endpoints, send email notifications, and create browser notifications. The `config.json` should be located at the `[appDir]/data/config.json` directoy, and within it you can configure the following options:
 
 ### config.json options
 
@@ -82,7 +82,7 @@ To provide data to `watches.json` the application exposes a variety of APIs, all
 http://your_server_ip_here/api#/
 ```
 
-Note: When the `apiCredentails` configuration option is set, all API requests are authenticated using Basic access authentication. This will be handled automatically by Swagger.
+Note: When the `apiCredentails` is configured in `config.json`, all API requests will need to be authenticated using Basic authentication. This will be handled automatically when using the Swagger.
 
 | Endpoint                | Method | Description                                                                                                     | Notes                       |
 | :---------------------- | :----- | :-------------------------------------------------------------------------------------------------------------- | --------------------------- |
@@ -101,14 +101,14 @@ Note: When the `apiCredentails` configuration option is set, all API requests ar
 1. Navigate to the Swagger.
 2. Use `/createWatch` to add an email to `watches.json`.
 3. Use `/addKeywordToWatch` or `/setKeywordsOfWatch` to add search keywords to the email.
-4. Mercari Watches will now "watch" for new items, for that email, and all its search keywords.
+4. Mercari Watches will now "watch" those keywords for new items.
 5. Use `/subscribe` to recieve all browser notifications for the email.
 6. Once a new item is found, the email will recieve a message with links to the item and a browser notification will sent be sent to whomever is subscribed.
-7. Use `/removeWatch` to remove an email from `watches.json`.
+7. Use `/removeWatch` to remove an email from `watches.json` or `/removeKeywordFromWatch` to remove a search keyword.
 
 ## A Note on API Rate Limiting
 
-While Mercari has loose API Rate limiting restrictions, there still exists measures to temporarily block all requests from an IP if too many are made in a short period of time. To prevent this from happening, adjust your configuration accordingly. If you're unsure, use the default values of 90000 for `requestFrequencyMS` and 1000 for `requestDelayMS`. This will provide a long enough delay between bursts of requests to stop Mercari's API Rate limiting from kicking in.
+While Mercari has loose API Rate limiting restrictions, there still exists measures to temporarily block all requests from an IP if too many are made in a short period of time. To prevent this from happening, adjust your configuration accordingly. If you're unsure which settings to use or how to configure them, use 90000 for `requestFrequencyMS` and 1000 for `requestDelayMS`. This will provide a long enough delay between bursts of requests to stop Mercari's API Rate limiting from kicking in.
 
 ## Development
 
