@@ -42,8 +42,6 @@ RUN adduser --system --uid 1001 nestjs
 # Copy over the build files and deps
 COPY --from=builder --chown=nestjs:nodejs /app/dist ./dist
 COPY --from=builder --chown=nestjs:nodejs /app/node_modules ./node_modules
-RUN mkdir /data
-RUN chown nestjs:nodejs /data
 RUN chown nestjs:nodejs /app
 
 USER nestjs
