@@ -23,5 +23,6 @@
   },
   "requestFrequencyMS": 90000,
   "requestDelayMS": 1000,
-  "requestPages": 3
+  "requestPages": 3,
+  "maxLinksPerEmail": 30
 }

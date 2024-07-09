@@ -10,6 +10,10 @@ async function bootstrap() {
   const config = GlobalService.config;
   const app = await NestFactory.create(AppModule);
 
+  process.on('uncaughtException', function () {
+    // ignore these 
+  })
+
   if (config) {
     const user = config?.apiCredentials?.user;
     const pass = config?.apiCredentials?.pass;
@@ -48,15 +52,19 @@ async function bootstrap() {
   if (GlobalService.config) {
     if (config?.requestFrequencyMS === undefined) {
       GlobalService.config.requestFrequencyMS = 90000;
-      console.warn('Confgiuration option "requestFrequencyMS" was unspecified. Proceeding with application default.')
+      console.warn('Configuration option "requestFrequencyMS" was unspecified. Proceeding with application default.')
     }
     if (config?.requestDelayMS === undefined) {
       GlobalService.config.requestDelayMS = 1000;
-      console.warn('Confgiuration option "requestDelayMS" was unspecified. Proceeding with application default.')
+      console.warn('Configuration option "requestDelayMS" was unspecified. Proceeding with application default.')
     }
     if (config?.requestPages === undefined) {
-      GlobalService.config.requestPages = 1;
-      console.warn('Confgiuration option "requestPages" was unspecified. Proceeding with application default.')
+      GlobalService.config.requestPages = 3;
+      console.warn('Configuration option "requestPages" was unspecified. Proceeding with application default.')
+    }
+    if (config?.maxLinksPerEmail === undefined) {
+      GlobalService.config.maxLinksPerEmail = 30;
+      console.warn('Configuration option "maxLinksPerEmail" was unspecified. Proceeding with application default.')
     }
   }
   await app.listen(3080);

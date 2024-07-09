@@ -52,7 +52,7 @@ const getLatestListings = async (keyword: string, token: string): Promise<Simple
   const promises: (MercariSearchResponse | undefined)[] = [];
 
   try {
-    for (let i = 0; i < (GlobalService.config?.requestPages ?? 1); i++) {
+    for (let i = 0; i < (GlobalService.config?.requestPages as number); i++) {
       promises.push(await generateSearchRequest(i, keyword, token));
 
       await new Promise<void>((res) => {
@@ -72,7 +72,11 @@ const getLatestListings = async (keyword: string, token: string): Promise<Simple
       ))
     )
 
-    console.log("Latest Item ID: " + itemsList[0].id + " - Search Term: " + keyword)
+    if (itemsList.length) {
+      console.log("Latest Item ID: " + itemsList[0].id + " - Search Term: " + keyword)
+    } else {
+      console.log("No Items Found - Search Term: " + keyword)
+    }
     return itemsList;
   }
   catch (e) {

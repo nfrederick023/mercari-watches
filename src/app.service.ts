@@ -176,7 +176,12 @@ export class AppService implements OnModuleInit {
     let text = 'One or more items were found that matched your keywords! \n';
 
     // check if the item is from Mercari or MercariShops
-    matches.forEach(async (match) => {
+    for (let i = 0; i < matches.length; i++) {
+      if (i >= (this.config?.maxLinksPerEmail as number)) {
+        break;
+      }
+
+      const match = matches[i];
       let link;
 
       if (match.id[0] === 'm') {
@@ -186,7 +191,7 @@ export class AppService implements OnModuleInit {
       }
 
       text += `\n\nItem Name: ${match.name} \nItem Link: ${link}`
-    });
+    }
 
     if (watch.subscription && this.desktopNotificationsEnabled) {
       const payload = JSON.stringify({
@@ -294,7 +299,6 @@ export class AppService implements OnModuleInit {
             await closePuppeteer();
             console.warn('A Mysterious Error Occured! Search was rejected.\n' + e);
           }
-
         } catch (e) {
           console.warn('Chromium Browser Failed to Launch! Search was rejected.\n' + e);
         }
@@ -315,10 +319,7 @@ export class AppService implements OnModuleInit {
               );
 
               // don't add as a match before we've caputed the seen ids and/or for newly added search terms
-              if (
-                this.seenIDs.length &&
-                newListings.length
-              ) {
+              if (this.seenIDs && newListings.length) {
                 watchMatches.push(...newListings);
               }
 
