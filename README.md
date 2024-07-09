@@ -4,7 +4,7 @@
 
 # Mercari Watches
 
-Recieve email and browser notifications whenever new items on [jp.mercari.com](https://jp.mercari.com/en/) match your keywords!
+Receive email and browser notifications when new items on [jp.mercari.com](https://jp.mercari.com/en/) match your keywords!
 
 ## Getting Started
 
@@ -97,7 +97,7 @@ Note: When the `apiCredentails` configuration option is set, all API requests ar
 
 ### The Steps to use Mercari Watches.
 
-1. Naviate to the Swagger.
+1. Navigate to the Swagger.
 2. Use `/createWatch` to add an email to `watches.json`.
 3. Use `/addKeywordToWatch` or `/setKeywordsOfWatch` to add search keywords to the email.
 4. Mercari Watches will now "watch" for new items, for that email, and all its search keywords.
