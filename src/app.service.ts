@@ -313,13 +313,17 @@ export class AppService implements OnModuleInit {
             for (const keyword of watch.keywords) {
 
               const listings = await getLatestListings(keyword, token as unknown as string);
-              // remove any listsings we already know about 
+
+              const oldListings = listings.filter(
+                (item) => this.seenIDs.includes(item.id),
+              );
+
               const newListings = listings.filter(
                 (item) => !this.seenIDs.includes(item.id),
               );
 
               // don't add as a match before we've caputed the seen ids and/or for newly added search terms
-              if (this.seenIDs && newListings.length) {
+              if (this.seenIDs.length && oldListings.length < listings.length) {
                 watchMatches.push(...newListings);
               }
 
