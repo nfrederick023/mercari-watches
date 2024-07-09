@@ -1,7 +1,7 @@
 services:
   mercariwatch:
     container_name: mercariwatch
-    image: nfrederick023/mercariwatch:latest
+    image: nfrederick023/mercariwatches:latest
     ports:
       - "3080:3080"
     volumes:
