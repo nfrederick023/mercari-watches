@@ -65,11 +65,11 @@ Mercari Watches uses two JSON files for configuration and user data management.
     - `privateKey` - VAPID private key.
 - `requestFrequencyMS` - How often the application checks for new items. If unspecified, the default is 90000ms.
 - `requestDelayMS` - The delay between each individual request to Mercari. If unspecified, the default is 1000ms.
-- `requestPages` - How many pages should be considered per request. If unspecified, the default is 3 pages.
+- `requestPages` - How many pages should be considered per request. If unspecified, the default is 3.
 
 If any of the configuration parameters are incorrect, or if the file is unreadable/not found, the application will issue a `console.warn()` with a relevant warning.
 
-Please see [the example-config.json](https://github.com/nfrederick023/mercari-watches/blob/master/example-config.json) to understand the complete format.
+Please see the [example-config.json](https://github.com/nfrederick023/mercari-watches/blob/master/example-config.json) to understand the complete format.
 
 ## Usage
 
