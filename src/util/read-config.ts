@@ -11,11 +11,11 @@ export interface Config {
       pass?: string;
     }
   },
-  apiCredentails?: {
+  apiCredentials?: {
     user?: string;
     pass?: string;
   }
-  desktopNotificationConfig?: {
+  browserNotificationConfig?: {
     mailTo?: string;
     vapidKeys?: {
       publicKey?: string;

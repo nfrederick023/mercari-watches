@@ -20,26 +20,9 @@ export class AppController {
     return this.appService.getWatches();
   }
 
-  @Post("subscribe")
-  subscribe(@Query('email') email: string, @Body() subscription?: webPush.PushSubscription): void {
-    if (subscription)
-      return this.appService.subscribe(email, subscription);
-    throw new HttpException('Bad Request', HttpStatus.BAD_REQUEST);
-  }
-
-  @Put("unsubscribe")
-  unsubscribe(@Query('email') email: string): void {
-    return this.appService.unsubscribe(email);
-  }
-
   @Post("createWatch")
   createWatch(@Query('email') email: string): void {
     return this.appService.createWatch(email);
-  }
-
-  @Delete("removeWatch")
-  removeWatch(@Query('email') email: string): void {
-    return this.appService.removeWatch(email);
   }
 
   @Put("addKeywordToWatch")
@@ -53,12 +36,29 @@ export class AppController {
   }
 
   @Put("setKeywordsOfWatch")
-  setKeywordsOfWatch(@Query('email') email: string, @Query('keyword') keywords: string[] | string): void {
+  setKeywordsOfWatch(@Query('email') email: string, @Query('keywords') keywords: string[]): void {
     return this.appService.setKeywordsOfWatch(email, typeof keywords === "string" ? [keywords] : keywords);
+  }
+
+  @Delete("removeWatch")
+  removeWatch(@Query('email') email: string): void {
+    return this.appService.removeWatch(email);
   }
 
   @Delete("resetWatches")
   resetWatches(): void {
     return this.appService.resetWatches();
+  }
+
+  @Post("subscribe")
+  subscribe(@Query('email') email: string, @Body() subscription?: webPush.PushSubscription): void {
+    if (subscription)
+      return this.appService.subscribe(email, subscription);
+    throw new HttpException('Bad Request', HttpStatus.BAD_REQUEST);
+  }
+
+  @Put("unsubscribe")
+  unsubscribe(@Query('email') email: string): void {
+    return this.appService.unsubscribe(email);
   }
 }

@@ -11,8 +11,8 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   if (config) {
-    const user = config?.apiCredentails?.user;
-    const pass = config?.apiCredentails?.pass;
+    const user = config?.apiCredentials?.user;
+    const pass = config?.apiCredentials?.pass;
 
     if (!user || !pass) {
       console.warn("No configuration found for API Username or Password! API is unsecured!");
@@ -36,7 +36,7 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup('api', app, document, {
     customJs: './public/swagger-static.js',
-    customJsStr: `const vapidPublicKey = "${config?.desktopNotificationConfig?.vapidKeys?.publicKey}";`
+    customJsStr: `const vapidPublicKey = "${config?.browserNotificationConfig?.vapidKeys?.publicKey}";`
   });
 
   // if verbose logging is disabled, hide all console logs

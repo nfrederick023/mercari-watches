@@ -1,6 +1,6 @@
 {
   "verboseLogging": true,
-  "apiCredentails": {
+  "apiCredentials": {
     "user": "admin",
     "pass": "password"
   },
@@ -14,7 +14,7 @@
       "pass": "password"
     }
   },
-  "desktopNotificationConfig": {
+  "browserNotificationConfig": {
     "mailTo": "email@email.com",
     "vapidKeys": {
       "publicKey": "public_vapid_key",

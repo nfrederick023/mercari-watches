@@ -23,9 +23,9 @@ export class AppService implements OnModuleInit {
     this.config = GlobalService.config;
 
     if (this.config) {
-      const webPushMailTo = this.config.desktopNotificationConfig?.mailTo;
-      const webPushPublicKey = this.config.desktopNotificationConfig?.vapidKeys?.publicKey;
-      const webPushPrivateKey = this.config.desktopNotificationConfig?.vapidKeys?.privateKey;
+      const webPushMailTo = this.config.browserNotificationConfig?.mailTo;
+      const webPushPublicKey = this.config.browserNotificationConfig?.vapidKeys?.publicKey;
+      const webPushPrivateKey = this.config.browserNotificationConfig?.vapidKeys?.privateKey;
 
       if (webPushMailTo && webPushPublicKey && webPushPrivateKey) {
         webPush.setVapidDetails(
@@ -36,7 +36,7 @@ export class AppService implements OnModuleInit {
 
         this.desktopNotificationsEnabled = true;
       } else {
-        console.warn("No configuration found for desktop notifications. Desktop notifications are disabled.")
+        console.warn("No configuration found for Browser notifications. Browser notifications are disabled.")
       }
 
       const host = this.config.emailNotificationConfig?.host;
@@ -196,9 +196,9 @@ export class AppService implements OnModuleInit {
 
       try {
         webPush.sendNotification(watch.subscription, payload);
-        console.log('Desktop notification sent successfully to ' + watch.email + ' for ' + matches.length + ' items!');
+        console.log('Browser notification sent successfully to ' + watch.email + ' for ' + matches.length + ' items!');
       } catch (e) {
-        console.warn("Desktop notification failed: " + e);
+        console.warn("Browser notification failed: " + e);
       }
     }
 

@@ -10,8 +10,8 @@ export class AppMiddleware implements NestMiddleware {
   use(req: Request, res: Response, next: NextFunction) {
     const config = GlobalService.config;
 
-    const username = config?.apiCredentails?.user;
-    const password = config?.apiCredentails?.pass;
+    const username = config?.apiCredentials?.user;
+    const password = config?.apiCredentials?.pass;
 
     if ((!username || !password) || (username && password && req.headers.authorization === "Basic " + Buffer.from(username + ":" + password).toString('base64')) || req.url === "/" || req.url === "/api#") {
       this.service.createWatchesIfNotExist();
