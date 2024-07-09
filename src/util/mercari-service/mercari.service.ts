@@ -1,5 +1,6 @@
 import axios from "axios";
 import { MercariSearchRequest, MercariSearchResponse, SimpleMercariItem } from "./mercari.interfaces";
+import { GlobalService } from "src/global.service";
 
 
 const createMercariSearchRequest = (page: number, keyword: string): MercariSearchRequest => {
@@ -47,17 +48,22 @@ const generateSearchRequest = async (page: number, keyword: string, token: strin
 }
 
 const getLatestListings = async (keyword: string, token: string): Promise<SimpleMercariItem[]> => {
-  const pagesToQuery = 5;
   let itemsList: SimpleMercariItem[] = [];
-  const promises: Promise<MercariSearchResponse | undefined>[] = [];
+  const promises: (MercariSearchResponse | undefined)[] = [];
 
   try {
-    for (let i = 0; i < pagesToQuery; i++) {
-      promises.push(generateSearchRequest(i, keyword, token));
+    for (let i = 0; i < (GlobalService.config?.requestPages ?? 1); i++) {
+      promises.push(await generateSearchRequest(i, keyword, token));
+
+      await new Promise<void>((res) => {
+        setTimeout(() => {
+          res();
+        }, GlobalService.config?.requestDelayMS ?? 1000);
+      });
     }
 
     const searchResults = await Promise.all(promises);
-    searchResults.forEach(result => itemsList.push(...result.items));
+    searchResults.forEach(result => { if (result) itemsList.push(...result.items) });
 
 
     itemsList = itemsList.filter((value, index, self) =>
@@ -66,8 +72,7 @@ const getLatestListings = async (keyword: string, token: string): Promise<Simple
       ))
     )
 
-    console.log(itemsList[0].id)
-
+    console.log("Latest Item ID: " + itemsList[0].id + " - Search Term: " + keyword)
     return itemsList;
   }
   catch (e) {

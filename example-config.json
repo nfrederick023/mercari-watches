@@ -1,0 +1,27 @@
+{
+  "verboseLogging": true,
+  "apiCredentails": {
+    "user": "admin",
+    "pass": "password"
+  },
+  "emailNotificationConfig": {
+    "host": "email.host.net",
+    "port": 25,
+    "secure": false,
+    "mailFrom": "email@email.com",
+    "auth": {
+      "user": "user",
+      "pass": "password"
+    }
+  },
+  "desktopNotificationConfig": {
+    "mailTo": "email@email.com",
+    "vapidKeys": {
+      "publicKey": "public_vapid_key",
+      "privateKey": "private_vapid_key"
+    }
+  },
+  "requestFrequencyMS": 90000,
+  "requestDelayMS": 1000,
+  "requestPages": 3
+}

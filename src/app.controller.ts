@@ -2,13 +2,16 @@ import { Body, Controller, Delete, Get, HttpException, HttpStatus, Post, Put, Qu
 import { AppService } from './app.service';
 import { Watch } from './app.interfaces';
 import * as webPush from 'web-push';
+import { Response } from 'express';
+import { ApiExcludeEndpoint } from '@nestjs/swagger';
 
 @Controller()
 export class AppController {
   constructor(private readonly appService: AppService) { }
 
   @Get("")
-  redirectToAPI(@Res() res): Watch[] {
+  @ApiExcludeEndpoint()
+  redirectToAPI(@Res() res: Response): void {
     return res.redirect('/api#');
   }
 

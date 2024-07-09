@@ -5,5 +5,5 @@ services:
     ports:
       - "3080:3080"
     volumes:
-      - C:/data/mercariwatch:/data/mercariwatch
+      - ./data:/data
     restart: always

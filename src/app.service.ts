@@ -5,37 +5,62 @@ import * as nodemailer from 'nodemailer';
 import puppeteer from 'puppeteer';
 import { Watch } from './app.interfaces';
 import SMTPTransport from 'nodemailer/lib/smtp-transport';
-import { Config, readConfig } from './util/read-config';
+import { Config } from './util/read-config';
 import { SimpleMercariItem } from './util/mercari-service/mercari.interfaces';
 import * as webPush from 'web-push';
+import { GlobalService } from './global.service';
 
 @Injectable()
 export class AppService implements OnModuleInit {
-  private readonly watchesDirectory = '/data/mercariwatch/watches.json';
+  private readonly watchesDirectory = './data/watches.json';
   private seenIDs: string[] = [];
   private count = 0;
-  private transporter: nodemailer.Transporter<SMTPTransport.SentMessageInfo>;
-  private config: Config;
+  private transporter?: nodemailer.Transporter<SMTPTransport.SentMessageInfo>;
+  private config?: Config;
+  private desktopNotificationsEnabled = false;
 
   async onModuleInit() {
-    this.config = readConfig();
-    if (this.config) {
-      webPush.setVapidDetails(
-        'mailto:' + this.config.fromEmail,
-        this.config.vapidKeys.publicKey,
-        this.config.vapidKeys.privateKey,
-      );
+    this.config = GlobalService.config;
 
-      this.transporter = nodemailer.createTransport({
-        host: this.config.host,
-        port: this.config.port,
-        secure: this.config.secure,
-        auth: this.config.auth
-      });
+    if (this.config) {
+      const webPushMailTo = this.config.desktopNotificationConfig?.mailTo;
+      const webPushPublicKey = this.config.desktopNotificationConfig?.vapidKeys?.publicKey;
+      const webPushPrivateKey = this.config.desktopNotificationConfig?.vapidKeys?.privateKey;
+
+      if (webPushMailTo && webPushPublicKey && webPushPrivateKey) {
+        webPush.setVapidDetails(
+          'mailto:' + webPushMailTo,
+          webPushPublicKey,
+          webPushPrivateKey,
+        );
+
+        this.desktopNotificationsEnabled = true;
+      } else {
+        console.warn("No configuration found for desktop notifications. Desktop notifications are disabled.")
+      }
+
+      const host = this.config.emailNotificationConfig?.host;
+      const port = this.config.emailNotificationConfig?.port;
+      const secure = this.config.emailNotificationConfig?.secure;
+      const user = this.config.emailNotificationConfig?.auth?.user;
+      const pass = this.config.emailNotificationConfig?.auth?.pass;
+      const fromEmail = this.config.emailNotificationConfig?.mailFrom;
+
+      if (host && port && secure !== undefined && user && pass && fromEmail) {
+        this.transporter = nodemailer.createTransport({
+          host,
+          port,
+          secure,
+          auth: {
+            user,
+            pass
+          }
+        });
+      } else {
+        console.warn("No configuration found for email notifications. Email notifications are disabled.")
+      }
 
       this.triggerWatchService();
-    } else {
-      throw (new Error("Failed to retrieve mail config!"))
     }
   }
 
@@ -161,37 +186,43 @@ export class AppService implements OnModuleInit {
       }
 
       text += `\n\nItem Name: ${match.name} \nItem Link: ${link}`
+    });
 
+    if (watch.subscription && this.desktopNotificationsEnabled) {
       const payload = JSON.stringify({
         title: 'Mercari Watches',
         body: 'New Items!',
-        url: link
       });
-      if (watch.subscription) {
-        await webPush.sendNotification(watch.subscription, payload);
-      }
-    });
 
-    const mailOptions = {
-      from: this.config.fromEmail,
-      to: watch.email,
-      subject: 'Mercari Watches: New Items are Avaliable!',
-      text,
-    };
-
-    this.transporter.sendMail(mailOptions, function (error) {
-      if (error) {
-        console.warn(error);
-      } else {
-        console.log('Email Sent for ' + matches.length + ' items!');
+      try {
+        webPush.sendNotification(watch.subscription, payload);
+        console.log('Desktop notification sent successfully to ' + watch.email + ' for ' + matches.length + ' items!');
+      } catch (e) {
+        console.warn("Desktop notification failed: " + e);
       }
-    });
+    }
+
+    if (this.transporter) {
+      const mailOptions = {
+        from: this.config?.emailNotificationConfig?.mailFrom,
+        to: watch.email,
+        subject: 'Mercari Watches: New Items are Avaliable!',
+        text,
+      };
+
+      this.transporter.sendMail(mailOptions, function (e) {
+        if (e) {
+          console.warn("Email notification failed: " + e);
+        } else {
+          console.log('Email notification sent successfully to ' + watch.email + ' for ' + matches.length + ' items!');
+        }
+      });
+    }
   }
 
   async triggerWatchService(): Promise<void> {
-    const delayBetweenUpdatesMS = 90000; // every 90 seconds
     this.createWatchesIfNotExist();
-    const newSeenIDs = [];
+    const newSeenIDs: string[] = [];
     const userDataDir = "./dev/null";
     const args = [
       '--aggressive-cache-discard',
@@ -205,7 +236,7 @@ export class AppService implements OnModuleInit {
     ];
 
     while (true) {
-      console.log(this.count);
+      console.log("Search Iteration: " + this.count);
       try {
         const watches = this.getWatches();
         let token: string | undefined;
@@ -232,6 +263,7 @@ export class AppService implements OnModuleInit {
           try {
             const [page] = await browser.pages();
             await page.goto(
+              // any search term will work here, but it has to be a search of some kind
               'https://jp.mercari.com/en/search?keyword=けいおん'
             );
 
@@ -260,47 +292,47 @@ export class AppService implements OnModuleInit {
             })
           } catch (e) {
             await closePuppeteer();
-            console.warn('A Mysterious Error Occured!\n' + e);
+            console.warn('A Mysterious Error Occured! Search was rejected.\n' + e);
           }
 
         } catch (e) {
-          console.warn('Browser Failed to Launch!\n' + e);
+          console.warn('Chromium Browser Failed to Launch! Search was rejected.\n' + e);
         }
 
         // if we got the token now we can make the actual search requests
         if (token) {
           // got through every watch, and each one of its search queries
-          await Promise.all(
-            watches.map(async (watch) => {
-              const watchMatches: SimpleMercariItem[] = [];
-              await Promise.all(
-                watch.keywords.map(async (keyword) => {
-                  const listings = await getLatestListings(keyword, token);
-                  // remove any listsings we already know about 
-                  const newListings = listings.filter(
-                    (item) => !this.seenIDs.includes(item.id),
-                  );
+          for (const watch of watches) {
 
-                  // don't add as a match before we've caputed the seen ids and/or for newly added search terms
-                  if (
-                    this.seenIDs.length &&
-                    listings.length !== newListings.length
-                  ) {
-                    watchMatches.push(...newListings);
-                  }
+            const watchMatches: SimpleMercariItem[] = [];
 
-                  newSeenIDs.push(...listings.map((item) => item.id));
-                }),
+            for (const keyword of watch.keywords) {
+
+              const listings = await getLatestListings(keyword, token as unknown as string);
+              // remove any listsings we already know about 
+              const newListings = listings.filter(
+                (item) => !this.seenIDs.includes(item.id),
               );
+
+              // don't add as a match before we've caputed the seen ids and/or for newly added search terms
+              if (
+                this.seenIDs.length &&
+                newListings.length
+              ) {
+                watchMatches.push(...newListings);
+              }
+
+              newSeenIDs.push(...listings.map((item) => item.id));
 
               if (watchMatches.length) {
                 this.sendNotifications(watch, watchMatches);
               }
-            }),
-          );
+            };
+          }
+
           this.seenIDs = newSeenIDs;
         } else {
-          console.warn("No Token was Found!");
+          console.warn("No Mercari Dpop Token was Retrieved! Unable to search for items.");
         }
       } catch (e) {
         console.warn('Error in Watch Service: ' + e);
@@ -309,7 +341,7 @@ export class AppService implements OnModuleInit {
       await new Promise<void>((res) => {
         setTimeout(() => {
           res();
-        }, delayBetweenUpdatesMS);
+        }, this.config?.requestFrequencyMS);
       });
     }
   }
