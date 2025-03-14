@@ -200,7 +200,7 @@ export class AppService implements OnModuleInit {
       });
 
       try {
-        webPush.sendNotification(watch.subscription, payload);
+        //webPush.sendNotification(watch.subscription, payload);
         console.log('Browser notification sent successfully to ' + watch.email + ' for ' + matches.length + ' items!');
       } catch (e) {
         console.warn("Browser notification failed: " + e);
@@ -215,13 +215,14 @@ export class AppService implements OnModuleInit {
         text,
       };
 
-      this.transporter.sendMail(mailOptions, function (e) {
-        if (e) {
-          console.warn("Email notification failed: " + e);
-        } else {
-          console.log('Email notification sent successfully to ' + watch.email + ' for ' + matches.length + ' items!');
-        }
-      });
+      console.log("sending email!");
+      // this.transporter.sendMail(mailOptions, function (e) {
+      //   if (e) {
+      //     console.warn("Email notification failed: " + e);
+      //   } else {
+      //     console.log('Email notification sent successfully to ' + watch.email + ' for ' + matches.length + ' items!');
+      //   }
+      // });
     }
   }
 
@@ -305,34 +306,39 @@ export class AppService implements OnModuleInit {
 
         // if we got the token now we can make the actual search requests
         if (token) {
-          // got through every watch, and each one of its search queries
+          // go through every watch
           for (const watch of watches) {
 
             const watchMatches: SimpleMercariItem[] = [];
 
+            // loop through each search term in that watch
             for (const keyword of watch.keywords) {
 
               const listings = await getLatestListings(keyword, token as unknown as string);
 
+              // everything we've seen before for this search term
               const oldListings = listings.filter(
                 (item) => this.seenIDs.includes(item.id),
               );
 
+              // everything we haven't seen for this search term
               const newListings = listings.filter(
                 (item) => !this.seenIDs.includes(item.id),
               );
 
-              // don't add as a match before we've caputed the seen ids and/or for newly added search terms
+              // prevents sending out notifications when the app starts (this.seenIDs.length) or  brand new search terms (oldListings.length < listings.length)
               if (this.seenIDs.length && oldListings.length < listings.length) {
                 watchMatches.push(...newListings);
               }
 
               newSeenIDs.push(...listings.map((item) => item.id));
 
-              if (watchMatches.length) {
-                this.sendNotifications(watch, watchMatches);
-              }
             };
+
+            // onces all of the matches have been compiled, send them out!
+            if (watchMatches.length) {
+              this.sendNotifications(watch, watchMatches);
+            }
           }
 
           this.seenIDs = newSeenIDs;
