@@ -200,7 +200,7 @@ export class AppService implements OnModuleInit {
       });
 
       try {
-        //webPush.sendNotification(watch.subscription, payload);
+        webPush.sendNotification(watch.subscription, payload);
         console.log('Browser notification sent successfully to ' + watch.email + ' for ' + matches.length + ' items!');
       } catch (e) {
         console.warn("Browser notification failed: " + e);
@@ -215,14 +215,13 @@ export class AppService implements OnModuleInit {
         text,
       };
 
-      console.log("sending email!");
-      // this.transporter.sendMail(mailOptions, function (e) {
-      //   if (e) {
-      //     console.warn("Email notification failed: " + e);
-      //   } else {
-      //     console.log('Email notification sent successfully to ' + watch.email + ' for ' + matches.length + ' items!');
-      //   }
-      // });
+      this.transporter.sendMail(mailOptions, function (e) {
+        if (e) {
+          console.warn("Email notification failed: " + e);
+        } else {
+          console.log('Email notification sent successfully to ' + watch.email + ' for ' + matches.length + ' items!');
+        }
+      });
     }
   }
 
