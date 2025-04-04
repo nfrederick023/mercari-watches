@@ -26,6 +26,7 @@ export interface Config {
   requestFrequencyMS?: number;
   requestDelayMS?: number;
   requestPages?: number;
+  clearRequestsLimit?: number;
   maxLinksPerEmail?: number;
 }
 

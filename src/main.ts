@@ -10,10 +10,6 @@ async function bootstrap() {
   const config = GlobalService.config;
   const app = await NestFactory.create(AppModule);
 
-  process.on('uncaughtException', function () {
-    // ignore these 
-  })
-
   if (config) {
     const user = config?.apiCredentials?.user;
     const pass = config?.apiCredentials?.pass;
@@ -62,11 +58,19 @@ async function bootstrap() {
       GlobalService.config.requestPages = 3;
       console.warn('Configuration option "requestPages" was unspecified. Proceeding with application default.')
     }
+
+    if (config?.clearRequestsLimit === undefined) {
+      GlobalService.config.clearRequestsLimit = 25;
+      console.warn('Configuration option "clearRequestsLimit" was unspecified. Proceeding with application default.')
+    }
+
     if (config?.maxLinksPerEmail === undefined) {
       GlobalService.config.maxLinksPerEmail = 30;
       console.warn('Configuration option "maxLinksPerEmail" was unspecified. Proceeding with application default.')
     }
+
   }
+
   await app.listen(3080);
 }
 bootstrap();

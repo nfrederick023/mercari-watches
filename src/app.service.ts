@@ -227,7 +227,7 @@ export class AppService implements OnModuleInit {
 
   async triggerWatchService(): Promise<void> {
     this.createWatchesIfNotExist();
-    const newSeenIDs: string[] = [];
+    let newSeenIDs: string[] = [];
     const userDataDir = "./dev/null";
     const args = [
       '--aggressive-cache-discard',
@@ -240,12 +240,17 @@ export class AppService implements OnModuleInit {
       '--no-sandbox'
     ];
 
-    while (true) {
+    setInterval(async () => {
       console.log("Search Iteration: " + this.count);
       try {
         const watches = this.getWatches();
         let token: string | undefined;
         this.count++;
+
+        if (this.config?.clearRequestsLimit && this.count % this.config?.clearRequestsLimit === 0) {
+          newSeenIDs = [];
+          this.seenIDs = [];
+        }
 
         try {
 
@@ -325,7 +330,7 @@ export class AppService implements OnModuleInit {
                 (item) => !this.seenIDs.includes(item.id),
               );
 
-              // prevents sending out notifications when the app starts (this.seenIDs.length) or  brand new search terms (oldListings.length < listings.length)
+              // prevents sending out notifications when the app starts (this.seenIDs.length) or brand new search terms (oldListings.length < listings.length)
               if (this.seenIDs.length && oldListings.length < listings.length) {
                 watchMatches.push(...newListings);
               }
@@ -348,11 +353,6 @@ export class AppService implements OnModuleInit {
         console.warn('Error in Watch Service: ' + e);
       }
 
-      await new Promise<void>((res) => {
-        setTimeout(() => {
-          res();
-        }, this.config?.requestFrequencyMS);
-      });
-    }
+    }, this.config?.requestFrequencyMS);
   }
 }
