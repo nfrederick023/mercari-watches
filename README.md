@@ -135,5 +135,5 @@ $ npm run start:prod
 Swagger URL:
 
 ```
-http://localhost:3080/
+http://localhost:3080/api#
 ```
