@@ -257,7 +257,7 @@ export class AppService implements OnModuleInit {
           // we need to retrieve the mercari dpop token to utilize their search API
           // there's a way to do it normally, but idk how so instead we use puppeteer hack
           // get the token through normal user flow by pulling up the search results page (any keyword will work)
-          const browser = await puppeteer.launch({ args, userDataDir });
+          const browser = await puppeteer.launch({ args });
 
           // help function to close all the pages and then the browser
           const closePuppeteer = async () => {
@@ -267,7 +267,6 @@ export class AppService implements OnModuleInit {
             }
 
             await browser.close();
-            fs.rmSync(userDataDir, { recursive: true, force: true });
           }
 
           try {
