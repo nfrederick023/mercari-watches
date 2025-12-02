@@ -265,6 +265,12 @@ export class AppService implements OnModuleInit {
         }
 
         try {
+          
+          try {
+            fs.rmSync(userDataDir, {recursive: true, force: true})
+          } catch (e) {
+            console.warn('Error deleting user data dir: ' + e);
+          }
 
           // we need to retrieve the mercari dpop token to utilize their search API
           // there's a way to do it normally, but idk how so instead we use puppeteer hack
@@ -283,7 +289,7 @@ export class AppService implements OnModuleInit {
             } catch (e) {
               console.warn('Error closing Puppeteer browser: ' + e);
             }
-            fs.rmSync(userDataDir, {recursive: true, force: true})
+
           }
 
           try {
