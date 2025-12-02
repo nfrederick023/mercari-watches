@@ -156,8 +156,16 @@ export class AppService implements OnModuleInit {
     fs.writeFileSync(this.watchesDirectory, JSON.stringify(watches));
   }
 
+  createDataDirectory(): void {
+    fs.mkdirSync('./data');
+  }
+
   doesWatchesExist(): boolean {
     return fs.existsSync(this.watchesDirectory);
+  }
+
+  doesDataExist(): boolean {
+    return fs.existsSync('./data');
   }
 
   setBlankWatches(): void {
@@ -166,6 +174,10 @@ export class AppService implements OnModuleInit {
 
   createWatchesIfNotExist(): void {
     this.seenIDs = [];
+
+    if (!this.doesDataExist()) {
+      this.createDataDirectory();
+    }
 
     if (!this.doesWatchesExist()) {
       this.setBlankWatches();
@@ -257,16 +269,21 @@ export class AppService implements OnModuleInit {
           // we need to retrieve the mercari dpop token to utilize their search API
           // there's a way to do it normally, but idk how so instead we use puppeteer hack
           // get the token through normal user flow by pulling up the search results page (any keyword will work)
-          const browser = await puppeteer.launch({ args });
+          const browser = await puppeteer.launch({ args, userDataDir });
 
           // help function to close all the pages and then the browser
           const closePuppeteer = async () => {
-            const pages = await browser.pages();
-            for (let i = 0; i < pages.length; i++) {
-              await pages[i].close();
-            }
+            try{
+              const pages = await browser.pages();
+              for (let i = 0; i < pages.length; i++) {
+                await pages[i].close();
+              }
 
-            await browser.close();
+              await browser.close();
+            } catch (e) {
+              console.warn('Error closing Puppeteer browser: ' + e);
+            }
+            fs.rmSync(userDataDir, {recursive: true, force: true})
           }
 
           try {
