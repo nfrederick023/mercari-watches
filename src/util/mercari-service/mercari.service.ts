@@ -1,7 +1,8 @@
 import axios from "axios";
 import { MercariSearchRequest, MercariSearchResponse, SimpleMercariItem } from "./mercari.interfaces";
 import { GlobalService } from "src/global.service";
-
+import { exportJWK, generateKeyPair, SignJWT } from 'jose';
+import { v4 as uuid } from "uuid";
 
 const createMercariSearchRequest = (page: number, keyword: string): MercariSearchRequest => {
   //hardcoded parameters
@@ -37,23 +38,22 @@ const generateSearchHeaders = (dpop: string) => {
   }
 }
 
-const generateSearchRequest = async (page: number, keyword: string, token: string): Promise<MercariSearchResponse | undefined> => {
+const generateSearchRequest = async (page: number, keyword: string): Promise<MercariSearchResponse | undefined> => {
   const mercariSearchURL = "https://api.mercari.jp/v2/entities:search";
+  const token = await generateMercariDpop(mercariSearchURL, "POST");
   const searchRequest = createMercariSearchRequest(page, keyword);
   const headers = generateSearchHeaders(token);
 
-
   return (await axios.post<MercariSearchResponse>(mercariSearchURL, searchRequest, { headers })).data;
-
 }
 
-const getLatestListings = async (keyword: string, token: string): Promise<SimpleMercariItem[]> => {
+const getLatestListings = async (keyword: string): Promise<SimpleMercariItem[]> => {
   let itemsList: SimpleMercariItem[] = [];
   const promises: (MercariSearchResponse | undefined)[] = [];
 
   try {
     for (let i = 0; i < (GlobalService.config?.requestPages as number); i++) {
-      promises.push(await generateSearchRequest(i, keyword, token));
+      promises.push(await generateSearchRequest(i, keyword));
 
       await new Promise<void>((res) => {
         setTimeout(() => {
@@ -64,7 +64,6 @@ const getLatestListings = async (keyword: string, token: string): Promise<Simple
 
     const searchResults = await Promise.all(promises);
     searchResults.forEach(result => { if (result) itemsList.push(...result.items) });
-
 
     itemsList = itemsList.filter((value, index, self) =>
       index === self.findIndex((t) => (
@@ -84,5 +83,25 @@ const getLatestListings = async (keyword: string, token: string): Promise<Simple
     return []
   }
 };
+
+const generateMercariDpop = async (url: string, method: string) => {
+  const { publicKey, privateKey } = await generateKeyPair("ES256");
+  const jwk = await exportJWK(publicKey);
+
+  const jwt = await new SignJWT({
+    htu: url,
+    htm: method.toUpperCase(),
+    iat: Math.floor(Date.now() / 1000),
+    jti: uuid(),
+  })
+    .setProtectedHeader({
+      alg: "ES256",
+      typ: "dpop+jwt",
+      jwk,
+    })
+    .sign(privateKey);
+
+  return jwt;
+}
 
 export default getLatestListings;

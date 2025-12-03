@@ -49,11 +49,16 @@ async function bootstrap() {
     if (config?.requestFrequencyMS === undefined) {
       GlobalService.config.requestFrequencyMS = 90000;
       console.warn('Configuration option "requestFrequencyMS" was unspecified. Proceeding with application default.')
+    } else if (config?.requestFrequencyMS < 30000) {
+      GlobalService.config.requestFrequencyMS = 90000;
+      console.warn('Configuration option "requestFrequencyMS" was less than 30000ms. Proceeding with application default of 90000ms to avoid rate limiting.')
     }
+
     if (config?.requestDelayMS === undefined) {
       GlobalService.config.requestDelayMS = 1000;
       console.warn('Configuration option "requestDelayMS" was unspecified. Proceeding with application default.')
     }
+
     if (config?.requestPages === undefined) {
       GlobalService.config.requestPages = 3;
       console.warn('Configuration option "requestPages" was unspecified. Proceeding with application default.')

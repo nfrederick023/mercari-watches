@@ -2,13 +2,14 @@ import { Injectable, OnModuleInit } from '@nestjs/common';
 import * as fs from 'node:fs';
 import getLatestListings from './util/mercari-service/mercari.service';
 import * as nodemailer from 'nodemailer';
-import puppeteer from 'puppeteer';
 import { Watch } from './app.interfaces';
 import SMTPTransport from 'nodemailer/lib/smtp-transport';
 import { Config } from './util/read-config';
 import { SimpleMercariItem } from './util/mercari-service/mercari.interfaces';
 import * as webPush from 'web-push';
 import { GlobalService } from './global.service';
+import { exportJWK, generateKeyPair, SignJWT } from 'jose';
+import { v4 as uuid } from "uuid";
 
 @Injectable()
 export class AppService implements OnModuleInit {
@@ -240,139 +241,50 @@ export class AppService implements OnModuleInit {
   async triggerWatchService(): Promise<void> {
     this.createWatchesIfNotExist();
     let newSeenIDs: string[] = [];
-    const userDataDir = "./dev/null";
-    const args = [
-      '--aggressive-cache-discard',
-      '--disable-cache',
-      '--disable-application-cache',
-      '--disable-offline-load-stale-cache',
-      '--disable-gpu-shader-disk-cache',
-      '--media-cache-size=0',
-      '--disk-cache-size=0',
-      '--no-sandbox'
-    ];
 
+    // launch interval
     setInterval(async () => {
-      console.log("Search Iteration: " + this.count);
+      console.log("Search Iteration:", this.count);
+      this.count++;
+
       try {
         const watches = this.getWatches();
-        let token: string | undefined;
-        this.count++;
+        let token: string | null = null;
 
+       
         if (this.config?.clearRequestsLimit && this.count % this.config?.clearRequestsLimit === 0) {
           newSeenIDs = [];
           this.seenIDs = [];
         }
 
-        try {
-          
-          try {
-            fs.rmSync(userDataDir, {recursive: true, force: true})
-          } catch (e) {
-            console.warn('Error deleting user data dir: ' + e);
-          }
+        // loop through each search term in that watch
+        for (const watch of watches) {
+          const watchMatches: SimpleMercariItem[] = [];
 
-          // we need to retrieve the mercari dpop token to utilize their search API
-          // there's a way to do it normally, but idk how so instead we use puppeteer hack
-          // get the token through normal user flow by pulling up the search results page (any keyword will work)
-          const browser = await puppeteer.launch({ args, userDataDir });
+          for (const keyword of watch.keywords) {
+            const listings = await getLatestListings(keyword);
 
-          // help function to close all the pages and then the browser
-          const closePuppeteer = async () => {
-            try{
-              const pages = await browser.pages();
-              for (let i = 0; i < pages.length; i++) {
-                await pages[i].close();
-              }
+            const oldListings = listings.filter((item) => this.seenIDs.includes(item.id)); // everything we've seen before for this search term
+            const newListings = listings.filter((item) => !this.seenIDs.includes(item.id)); // everything we haven't seen for this search term
 
-              await browser.close();
-            } catch (e) {
-              console.warn('Error closing Puppeteer browser: ' + e);
+            // prevents sending out notifications when the app starts (this.seenIDs.length) or brand new search terms (oldListings.length < listings.length)
+            if (this.seenIDs.length && oldListings.length < listings.length) {
+              watchMatches.push(...newListings);
             }
 
+            newSeenIDs.push(...listings.map((item) => item.id));
           }
 
-          try {
-            const [page] = await browser.pages();
-            await page.goto(
-              // any search term will work here, but it has to be a search of some kind
-              'https://jp.mercari.com/en/search?keyword=けいおん'
-            );
-
-            await new Promise<void>((res) => {
-
-              // if we don't get the token within 20 seconds, something is wrong 
-              setTimeout(async () => {
-                if (!page.isClosed()) {
-                  await closePuppeteer();
-                }
-
-                res()
-              }, 20000);
-
-              // wait for all http requests, find the one that gets the search results, pull out the dpop token from the headers
-              page.on('request', async (req) => {
-                const url = req.url().includes('entities:search');
-                const dpop = req.headers().dpop;
-
-                if (url && dpop) {
-                  token = dpop;
-                  res()
-                  await closePuppeteer();
-                }
-              });
-            })
-          } catch (e) {
-            await closePuppeteer();
-            console.warn('A Mysterious Error Occured! Search was rejected.\n' + e);
+          // onces all of the matches have been compiled, send them out!
+          if (watchMatches.length) {
+            this.sendNotifications(watch, watchMatches);
           }
-        } catch (e) {
-          console.warn('Chromium Browser Failed to Launch! Search was rejected.\n' + e);
         }
 
-        // if we got the token now we can make the actual search requests
-        if (token) {
-          // go through every watch
-          for (const watch of watches) {
+        this.seenIDs = newSeenIDs;
 
-            const watchMatches: SimpleMercariItem[] = [];
-
-            // loop through each search term in that watch
-            for (const keyword of watch.keywords) {
-
-              const listings = await getLatestListings(keyword, token as unknown as string);
-
-              // everything we've seen before for this search term
-              const oldListings = listings.filter(
-                (item) => this.seenIDs.includes(item.id),
-              );
-
-              // everything we haven't seen for this search term
-              const newListings = listings.filter(
-                (item) => !this.seenIDs.includes(item.id),
-              );
-
-              // prevents sending out notifications when the app starts (this.seenIDs.length) or brand new search terms (oldListings.length < listings.length)
-              if (this.seenIDs.length && oldListings.length < listings.length) {
-                watchMatches.push(...newListings);
-              }
-
-              newSeenIDs.push(...listings.map((item) => item.id));
-
-            };
-
-            // onces all of the matches have been compiled, send them out!
-            if (watchMatches.length) {
-              this.sendNotifications(watch, watchMatches);
-            }
-          }
-
-          this.seenIDs = newSeenIDs;
-        } else {
-          console.warn("No Mercari Dpop Token was Retrieved! Unable to search for items.");
-        }
-      } catch (e) {
-        console.warn('Error in Watch Service: ' + e);
+      } catch (err) {
+        console.warn("Error in Watch Service:", err);
       }
 
     }, this.config?.requestFrequencyMS);
