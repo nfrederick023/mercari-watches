@@ -1,8 +1,6 @@
 import axios from "axios";
 import { MercariSearchRequest, MercariSearchResponse, SimpleMercariItem } from "./mercari.interfaces";
 import { GlobalService } from "src/global.service";
-import { exportJWK, generateKeyPair, SignJWT } from 'jose';
-import { v4 as uuid } from "uuid";
 
 const createMercariSearchRequest = (page: number, keyword: string): MercariSearchRequest => {
   //hardcoded parameters
@@ -85,14 +83,17 @@ const getLatestListings = async (keyword: string): Promise<SimpleMercariItem[]> 
 };
 
 const generateMercariDpop = async (url: string, method: string) => {
-  const { publicKey, privateKey } = await generateKeyPair("ES256");
-  const jwk = await exportJWK(publicKey);
+  const jose = ( await import('jose') ).default;
+  const uuid = ( await import('uuid') ).default;
 
-  const jwt = await new SignJWT({
+  const { publicKey, privateKey } = await jose.generateKeyPair("ES256");
+  const jwk = await jose.exportJWK(publicKey);
+
+  const jwt = await new jose.SignJWT({
     htu: url,
     htm: method.toUpperCase(),
     iat: Math.floor(Date.now() / 1000),
-    jti: uuid(),
+    jti: uuid.v4(),
   })
     .setProtectedHeader({
       alg: "ES256",
