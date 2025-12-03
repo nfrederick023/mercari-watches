@@ -51,8 +51,8 @@ Mercari Watches uses two JSON files for configuration and user data management.
   - `user` - API access username.
   - `pass` - API access password.
 - `emailNotificationConfig` - Configuration for email notifications (SMTP Transport). If unspecified, email notifications will be disabled.
-  - `host` - Connection hostname. (e.g. smtp.sendgrid.net).
-  - `port` - Connection port (e.g. 25).
+  - `host` - Connection hostname. (e.g. smtp.resend.com).
+  - `port` - Connection port (e.g. 465).
   - `secure` - If the connection should use SSL (true) or not (false).
   - `mailFrom` - Sender for emails.
   - `auth` - Access credentials for the connection.
