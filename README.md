@@ -4,7 +4,7 @@
 
 # Mercari Watches
 
-Receive email and browser notifications when new items on [jp.mercari.com](https://jp.mercari.com/en/) match your keywords!
+Email and browser notifications for JP Mercari listings that match keywords. 
 
 ## Getting Started
 
