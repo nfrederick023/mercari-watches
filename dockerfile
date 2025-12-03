@@ -4,9 +4,6 @@ FROM node:20-alpine AS base
 FROM base AS deps
 WORKDIR /app
 
-# Install dependencies only when needed
-RUN apk add --no-cache libc6-compat
-
 # Copy package.json and install
 COPY package.json package-lock.json* ./
 RUN npm ci
@@ -21,20 +18,6 @@ RUN npm run build
 
 FROM base AS runner
 WORKDIR /app
-
-# Tell Puppeteer to skip installing Chrome. We'll be using the installed package.
-ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
-
-# Installs packages for Chromium.
-RUN apk add --no-cache \
-  chromium \
-  nss \
-  freetype \
-  harfbuzz \
-  ca-certificates \
-  ttf-freefont \
-  nodejs \
-  yarn
 
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nestjs

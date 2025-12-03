@@ -82,18 +82,18 @@ const getLatestListings = async (keyword: string): Promise<SimpleMercariItem[]> 
   }
 };
 
+
 const generateMercariDpop = async (url: string, method: string) => {
-  const jose = ( await import('jose') ).default;
-  const uuid = ( await import('uuid') ).default;
+  const { v4: uuid } = await import("uuid");
+  const { exportJWK, generateKeyPair, SignJWT } = await import("jose");
+  const { publicKey, privateKey } = await generateKeyPair("ES256");
+  const jwk = await exportJWK(publicKey);
 
-  const { publicKey, privateKey } = await jose.generateKeyPair("ES256");
-  const jwk = await jose.exportJWK(publicKey);
-
-  const jwt = await new jose.SignJWT({
+  const jwt = await new SignJWT({
     htu: url,
     htm: method.toUpperCase(),
     iat: Math.floor(Date.now() / 1000),
-    jti: uuid.v4(),
+    jti: uuid(),
   })
     .setProtectedHeader({
       alg: "ES256",
