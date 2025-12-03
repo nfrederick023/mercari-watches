@@ -4,7 +4,7 @@
 
 # Mercari Watches
 
-Email and browser notifications for JP Mercari listings that match keywords. 
+Recieve email and browser notifications for JP Mercari listings that match keywords. 
 
 ## Getting Started
 
