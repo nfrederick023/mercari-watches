@@ -42,7 +42,7 @@ Mercari Watches uses two JSON files for configuration and user data management.
 
 `watches.json` is automatically generated and managed by the application. Ideally you'd only interact with this file when migrating systems, backing up/restoring data or for development. This file can be edited safely on fly; however, this is discouraged. The file is created and found in the same directory as `config.json`.
 
-`config.json` must be created and managed by you. Whilst the file itself (and every parameter therein) is technically **optional**, a correct configuration file is mandatory in order to secure API endpoints, send email notifications, and create browser notifications. The `config.json` should be located at the `[appDir]/data/config.json` directoy, and within it you can configure the following options:
+`config.json` must be created and managed by you. Whilst the file itself (and every parameter therein) is technically **optional**, a correct configuration file is mandatory in order to secure API endpoints, send email notifications, and create browser notifications. The `config.json` should be located at the `[appDir]/data/config.json` directory, and within it you can configure the following options:
 
 ### config.json options
 
