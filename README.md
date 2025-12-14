@@ -83,6 +83,8 @@ To provide data to `watches.json` the application exposes a variety of APIs, all
 http://your_server_ip_here/api#/
 ```
 
+By default the application is exposed on port `3080`. This can be changed in the `docker.compose` file. 
+
 Note: When the `apiCredentails` is configured in `config.json`, all API requests will need to be authenticated using Basic authentication. This will be handled automatically when using the Swagger.
 
 | Endpoint                | Method | Description                                                                                                     | Notes                       |
