@@ -1,4 +1,4 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import * as fs from 'node:fs';
 import * as nodemailer from 'nodemailer';
 import { Watch } from './app.interfaces';
@@ -7,22 +7,21 @@ import { Config } from './util/read-config';
 import { SimpleMercariItem } from './util/mercari-service/mercari.interfaces';
 import * as webPush from 'web-push';
 import { GlobalService } from './global.service';
-import { exportJWK, generateKeyPair, SignJWT } from 'jose';
-import { v4 as uuid } from "uuid";
 import { MercariService } from './util/mercari-service/mercari.service';
 
 @Injectable()
-export class AppService implements OnModuleInit {
+export class AppService {
   private readonly watchesDirectory = './data/watches.json';
   private seenIDs: string[] = [];
   private count = 0;
   private transporter?: nodemailer.Transporter<SMTPTransport.SentMessageInfo>;
   private config?: Config;
   private desktopNotificationsEnabled = false;
+  private running = false;
 
   constructor(private readonly mercariService: MercariService) {}
 
-  async onModuleInit() {
+  async init() {
     this.config = GlobalService.config;
 
     if (this.config) {
@@ -240,20 +239,29 @@ export class AppService implements OnModuleInit {
     }
   }
 
-  async triggerWatchService(): Promise<void> {
+ async triggerWatchService(): Promise<void> {
     this.createWatchesIfNotExist();
     let newSeenIDs: string[] = [];
 
-    // launch interval
-    setInterval(async () => {
-      console.log("Search Iteration:", this.count);
-      this.count++;
+    const frequency = this.config?.requestFrequencyMS;
+
+    const iterate = async () => {
+      if (this.running) {
+        console.log("Skipping Iteration: " + this.count + " - Prior search in progess.");
+        this.count++;
+        return; 
+      }
+      
+      this.running = true;
+      const startTime = Date.now();
 
       try {
-        const watches = this.getWatches();
-        let token: string | null = null;
+        console.log("Search Iteration: " + this.count);
+        
+        this.count++;
 
-       
+        const watches = this.getWatches();
+
         if (this.config?.clearRequestsLimit && this.count % this.config?.clearRequestsLimit === 0) {
           newSeenIDs = [];
           this.seenIDs = [];
@@ -284,11 +292,15 @@ export class AppService implements OnModuleInit {
         }
 
         this.seenIDs = newSeenIDs;
-
       } catch (err) {
-        console.warn("Error in Watch Service:", err);
+        console.warn("Error in Watch Service: ", err);
+      } finally {
+        console.log("Executed in " + (Date.now() - startTime) + " ms.");
+        this.running = false;
       }
+    };
 
-    }, this.config?.requestFrequencyMS);
+    //iterate();
+    setInterval(iterate, frequency);
   }
 }

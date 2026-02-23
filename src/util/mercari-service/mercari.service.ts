@@ -1,6 +1,6 @@
 import axios from "axios";
 import { MercariSearchRequest, MercariSearchResponse, SimpleMercariItem } from "./mercari.interfaces";
-import { GlobalService } from "../../../src/global.service";
+import { GlobalService } from "../../global.service";
 import { Injectable } from "@nestjs/common";
 
 @Injectable()
