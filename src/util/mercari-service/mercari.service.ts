@@ -66,11 +66,12 @@ public getLatestListings = async (keyword: string): Promise<SimpleMercariItem[]>
     const searchResults = await Promise.all(promises);
     searchResults.forEach(result => { if (result) itemsList.push(...result.items) });
 
+    // remove duplicates based on id and sort by created
     itemsList = itemsList.filter((value, index, self) =>
       index === self.findIndex((t) => (
         t.id === value.id
       ))
-    )
+    ).sort((a,b) => b.created - a.created);
 
     if (itemsList.length) {
       console.log("Latest Item ID: " + itemsList[0].id + " - Search Term: " + keyword)

@@ -4,7 +4,7 @@ import * as nodemailer from 'nodemailer';
 import { Watch } from './app.interfaces';
 import SMTPTransport from 'nodemailer/lib/smtp-transport';
 import { Config } from './util/read-config';
-import { SimpleMercariItem } from './util/mercari-service/mercari.interfaces';
+import { SimpleMercariItem, WatchMatch } from './util/mercari-service/mercari.interfaces';
 import * as webPush from 'web-push';
 import { GlobalService } from './global.service';
 import { MercariService } from './util/mercari-service/mercari.service';
@@ -12,12 +12,13 @@ import { MercariService } from './util/mercari-service/mercari.service';
 @Injectable()
 export class AppService {
   private readonly watchesDirectory = './data/watches.json';
-  private seenIDs: string[] = [];
+  private seenIDs: Set<string> = new Set<string>();
   private count = 0;
   private transporter?: nodemailer.Transporter<SMTPTransport.SentMessageInfo>;
   private config?: Config;
   private desktopNotificationsEnabled = false;
   private running = false;
+  private keywords: string[] = [];
 
   constructor(private readonly mercariService: MercariService) {}
 
@@ -175,7 +176,7 @@ export class AppService {
   }
 
   createWatchesIfNotExist(): void {
-    this.seenIDs = [];
+    this.resetSeenIDs();
 
     if (!this.doesDataExist()) {
       this.createDataDirectory();
@@ -186,7 +187,7 @@ export class AppService {
     }
   }
 
-  sendNotifications(watch: Watch, matches: SimpleMercariItem[]): void {
+  sendNotifications(watch: Watch, matches: WatchMatch[]): void {
     let text = 'One or more items were found that matched your keywords! \n';
 
     // check if the item is from Mercari or MercariShops
@@ -239,13 +240,18 @@ export class AppService {
     }
   }
 
- async triggerWatchService(): Promise<void> {
+  resetSeenIDs(): void {
+    this.seenIDs = new Set<string>();
+  };
+
+  async triggerWatchService(): Promise<void> {
     this.createWatchesIfNotExist();
-    let newSeenIDs: string[] = [];
 
     const frequency = this.config?.requestFrequencyMS;
 
     const iterate = async () => {
+      this.count++;
+
       if (this.running) {
         console.log("Skipping Iteration: " + this.count + " - Prior search in progess.");
         this.count++;
@@ -257,50 +263,82 @@ export class AppService {
 
       try {
         console.log("Search Iteration: " + this.count);
-        
-        this.count++;
-
         const watches = this.getWatches();
 
+        if(watches.length === 0){
+          console.log("No watches found. No search will be conducted.");
+        }
+
+        const keywords = watches.map(watch => watch.keywords).flat();
+
+        // if the number of watches changes, reset the seenIDs to refresh the search
+        if(this.seenIDs.size !== 0 && this.keywords.toString() != keywords.toString()){
+          console.log("Watch change detected. Searches will be refreshed.");
+          this.resetSeenIDs();
+        }
+
+        this.keywords = keywords;
+
+        // periodically reset the seenIDs every `clearRequestsLimit` iterations to keep ID list from growing too large 
         if (this.config?.clearRequestsLimit && this.count % this.config?.clearRequestsLimit === 0) {
-          newSeenIDs = [];
-          this.seenIDs = [];
+          console.log("Request limit hit. Searches will be refreshed.");
+          this.resetSeenIDs();
         }
 
-        // loop through each search term in that watch
-        for (const watch of watches) {
-          const watchMatches: SimpleMercariItem[] = [];
+        const iterationSeen = new Set<string>();
+        const watchMatches: WatchMatch[] = [];
 
-          for (const keyword of watch.keywords) {
-            const listings = await this.mercariService.getLatestListings(keyword);
+        if(keywords.length === 0){
+          console.log("No keywords  defined. No search will be conducted.");
+        }
 
-            const oldListings = listings.filter((item) => this.seenIDs.includes(item.id)); // everything we've seen before for this search term
-            const newListings = listings.filter((item) => !this.seenIDs.includes(item.id)); // everything we haven't seen for this search term
+        for (const keyword of new Set(keywords)) {
+          const listings = await this.mercariService.getLatestListings(keyword);
 
-            // prevents sending out notifications when the app starts (this.seenIDs.length) or brand new search terms (oldListings.length < listings.length)
-            if (this.seenIDs.length && oldListings.length < listings.length) {
-              watchMatches.push(...newListings);
+          // listings is sorted by created newest -> oldest
+          const newestSeenListing = listings.find(listing => this.seenIDs.has(listing.id));
+
+          // if there were no listings found, ignore
+          if (listings.length === 0) {
+            continue;
+          }
+
+          // find new items relative to the seenIDs and their created dates
+          const newListings = listings.filter((item) => !this.seenIDs.has(item.id) && item.created > (newestSeenListing?.created ?? 0));
+
+          // notify only if we have previously seen state (not on start-up or search refresh) 
+          // and when at least one new listing was found
+          if (this.seenIDs.size && newListings.length > 0) {
+            watchMatches.push(...newListings.map(listing => {return {...listing, keyword}}));
+          }
+
+          // add all listing ids to iterationSeen
+          listings.forEach((item) => iterationSeen.add(item.id));
+        }
+
+        // send notifications for any matches
+        if (watchMatches.length) {
+          for(const watch of watches){
+            const matchesToSend: WatchMatch[] = watchMatches.filter(match => watch.keywords.includes(match.keyword))
+            if(matchesToSend.length){
+              // console.log("Sending email to " + watch.email + " for " + matchesToSend.map(match => match.id).toString() + " for keywords " + matchesToSend.map(match => match.keyword).toString());
+              this.sendNotifications(watch, matchesToSend);
             }
-
-            newSeenIDs.push(...listings.map((item) => item.id));
-          }
-
-          // onces all of the matches have been compiled, send them out!
-          if (watchMatches.length) {
-            this.sendNotifications(watch, watchMatches);
           }
         }
 
-        this.seenIDs = newSeenIDs;
+        // add all new IDs from this iteration to seenIDs
+        iterationSeen.forEach(seen => this.seenIDs.add(seen));
+
       } catch (err) {
         console.warn("Error in Watch Service: ", err);
       } finally {
-        console.log("Executed in " + (Date.now() - startTime) + " ms.");
+        console.log("Executed in " + (Date.now() - startTime) + "ms\n");
         this.running = false;
       }
     };
 
-    //iterate();
+    iterate();
     setInterval(iterate, frequency);
   }
 }

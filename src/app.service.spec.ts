@@ -2,63 +2,341 @@ import { jest } from '@jest/globals';
 import { AppService } from './app.service';
 import { GlobalService } from './global.service';
 import { MercariService } from './util/mercari-service/mercari.service';
+import { SimpleMercariItem } from './util/mercari-service/mercari.interfaces';
 
 jest.useFakeTimers();
 
-describe('AppService.triggerWatchService race condition', () => {
+const REQUEST_FREQ = 50;
+
+const createListingsMocks = (ms: MercariService, listings: SimpleMercariItem[][] ) => {
+  const msSpy = jest.spyOn(ms, 'getLatestListings');
+  for (const listing of listings){
+    msSpy.mockReturnValueOnce(new Promise(resolve =>  resolve(listing)));
+  }
+  return msSpy;
+}
+
+describe("AppService.triggerWatchService race condition", () => {
   afterEach(() => {
     jest.clearAllTimers();
     jest.resetAllMocks();
-    GlobalService.config = undefined;
   });
 
-  test('overlapping interval runs can cause a notification to be sent on the very first run (reentrancy race)', async () => {
-    // config: small frequency so intervals will overlap in the test
+  beforeEach(() => {
     GlobalService.config = {
-      requestFrequencyMS: 50,
-      requestPages: 1,
-      requestDelayMS: 0,
-      maxLinksPerEmail: 5,
+      requestFrequencyMS: REQUEST_FREQ,
     };
+  });
 
-    const mercariService = new MercariService();
-    const svc = new AppService(mercariService);
+  it("should send a notification", async () => {
+    const ms = new MercariService();
+    const svc = new AppService(ms);
+    jest.spyOn(svc, 'createWatchesIfNotExist').mockImplementation(() => {});
+    jest.spyOn(svc, 'getWatches').mockImplementation(() => [{ email: 'test@example.com', keywords: ['kw'], subscription: null }]);
+    const sendSpy = jest.spyOn(svc as any, 'sendNotifications').mockImplementation(() => {});
+
+    createListingsMocks(ms, [
+      [{ id: '1', name: 'kw', created: 10 }],
+      [{ id: '2', name: 'kw', created: 10 }]
+    ])
 
     svc.init();
 
-    jest.spyOn(svc as any, 'createWatchesIfNotExist').mockImplementation(() => {});
-    jest.spyOn(svc as any, 'getWatches').mockImplementation(() => [{ email: 'test@example.com', keywords: ['kw'], subscription: null }]);
+    await Promise.resolve();
+    jest.advanceTimersByTime(REQUEST_FREQ);
+    await Promise.resolve();
+
+    expect(sendSpy).toHaveBeenCalledTimes(1);
+  })
+
+  it("should throw an error in watch service", async () => {
+    const ms = new MercariService();
+    const svc = new AppService(ms);
+    jest.spyOn(svc, 'createWatchesIfNotExist').mockImplementation(() => {});
+    jest.spyOn(svc, 'getWatches').mockImplementation(() => [{ email: 'test@example.com', keywords: ['kw'], subscription: null }]);
     const sendSpy = jest.spyOn(svc as any, 'sendNotifications').mockImplementation(() => {});
 
-    // First call resolves late with 3 items; second (overlapping) resolves earlier with 2 items
-    jest.spyOn(mercariService as any, 'getLatestListings')
-    .mockImplementationOnce(() => new Promise(resolve => setTimeout(() => resolve([
-      { id: '1', name: 'a' }, { id: '2', name: 'b' }, { id: '3', name: 'c' }
-    ]), 70)))
-    .mockImplementationOnce(() => new Promise(resolve => setTimeout(() => resolve([
-      { id: '1', name: 'a' }, { id: '2', name: 'b' }
-    ]), 10)));
+    jest.spyOn(ms, 'getLatestListings').mockImplementation(() => {throw new Error});
 
-    // advance to first interval start (50ms) -> first iteration starts and schedules its (70ms) listing resolution
-     jest.advanceTimersByTime(50);
+    svc.init();
+
+    expect(sendSpy).toHaveBeenCalledTimes(0);
+  })
+
+  it("should reset seenIds periodically", async () => {
+    if (GlobalService.config) {
+      GlobalService.config.clearRequestsLimit = 3;
+    }
+
+    const ms = new MercariService();
+    const svc = new AppService(ms);
+    jest.spyOn(svc, 'createWatchesIfNotExist').mockImplementation(() => {});
+    jest.spyOn(svc, 'getWatches').mockImplementation(() => [{ email: 'test@example.com', keywords: ['kw'], subscription: null }]);
+    const sendSpy = jest.spyOn(svc as any, 'sendNotifications').mockImplementation(() => {});
+
+    createListingsMocks(ms, [
+      [{ id: '1', name: 'kw', created: 10 }],
+      [{ id: '2', name: 'kw', created: 15 }],
+      [{ id: '3', name: 'kw', created: 20 }],
+      [{ id: '4', name: 'kw', created: 25 }],
+    ])
+
+    svc.init();
+
+    await Promise.resolve();
+    jest.advanceTimersByTime(REQUEST_FREQ);
     await Promise.resolve();
 
-    // advance to second interval start (100ms) -> second iteration starts and schedules its (10ms) listing resolution
-    jest.advanceTimersByTime(50);
+    expect(sendSpy).toHaveBeenCalledTimes(1);
+
+    jest.advanceTimersByTime(REQUEST_FREQ);
     await Promise.resolve();
 
-    // advance to when the second listing resolves (10ms later -> 110ms overall)
-    jest.advanceTimersByTime(10);
+    expect(sendSpy).toHaveBeenCalledTimes(1);
+
+    jest.advanceTimersByTime(REQUEST_FREQ);
+    await Promise.resolve();
+    expect(sendSpy).toHaveBeenCalledTimes(2);
+  })
+
+  it("should skip when no listings are found", async () => {
+    const ms = new MercariService();
+    const svc = new AppService(ms);
+    jest.spyOn(svc, 'createWatchesIfNotExist').mockImplementation(() => {});
+    jest.spyOn(svc, 'getWatches').mockImplementation(() => [{ email: 'test@example.com', keywords: ['kw'], subscription: null }]);
+    const sendSpy = jest.spyOn(svc as any, 'sendNotifications').mockImplementation(() => {});
+
+    createListingsMocks(ms, [
+      []
+    ])
+
+    svc.init();
+
+    await Promise.resolve();
+    expect(sendSpy).toHaveBeenCalledTimes(0);
+  })
+
+  it("should skip a notification because no watches", async () => {
+    const ms = new MercariService();
+    const svc = new AppService(ms);
+    jest.spyOn(svc, 'createWatchesIfNotExist').mockImplementation(() => {});
+    jest.spyOn(svc, 'getWatches').mockImplementation(() => [{ email: 'test@example.com', keywords: ['kw'], subscription: null }]);
+    const sendSpy = jest.spyOn(svc as any, 'sendNotifications').mockImplementation(() => {});
+
+    const msSpy = createListingsMocks(ms, [
+      [{ id: '1', name: 'kw', created: 10 }],
+      [{ id: '2', name: 'kw', created: 15 }],
+      [{ id: '3', name: 'kw', created: 20 }],
+      [{ id: '4', name: 'kw', created: 25 }],
+    ])
+
+    svc.init();
+
+    await Promise.resolve();
+    jest.advanceTimersByTime(REQUEST_FREQ);
     await Promise.resolve();
 
-    // advance to when the first listing resolves (70ms later -> 120ms overall)
-    jest.advanceTimersByTime(10);
+    expect(msSpy).toHaveBeenCalledTimes(2);
+    expect(sendSpy).toHaveBeenCalledTimes(1);
+    jest.spyOn(svc, 'getWatches').mockImplementation(() => []);
+
+    jest.advanceTimersByTime(REQUEST_FREQ);
+    expect(msSpy).toHaveBeenCalledTimes(2);
+
+    jest.spyOn(svc, 'getWatches').mockImplementation(() => [{ email: 'test@example.com', keywords: ['kw'], subscription: null }]);
+    jest.advanceTimersByTime(REQUEST_FREQ);
+    await Promise.resolve();
+    expect(msSpy).toHaveBeenCalledTimes(3);
+    expect(sendSpy).toHaveBeenCalledTimes(1);
+
+    jest.advanceTimersByTime(REQUEST_FREQ);
+    await Promise.resolve();
+    expect(msSpy).toHaveBeenCalledTimes(4);
+    expect(sendSpy).toHaveBeenCalledTimes(2);
+
+  })
+
+  it("should send reset searches because keywords changed", async () => {
+    const ms = new MercariService();
+    const svc = new AppService(ms);
+    jest.spyOn(svc, 'createWatchesIfNotExist').mockImplementation(() => {});
+    jest.spyOn(svc, 'getWatches').mockImplementation(() => [{ email: 'test@example.com', keywords: ['kw'], subscription: null }]);
+    const sendSpy = jest.spyOn(svc as any, 'sendNotifications').mockImplementation(() => {});
+
+    createListingsMocks(ms, [
+      [{ id: '1', name: 'kw', created: 10 }],
+      [{ id: '1', name: 'kw', created: 10 }, { id: '2', name: 'kw', created: 15 }],
+      // reset
+      [{ id: '9', name: 'kw', created: 30 }, { id: '8', name: 'kw', created: 15 }, { id: '7', name: 'kw', created: 20 }],
+      [{ id: '4', name: 'kw2', created: 5 }],
+      [{ id: '9', name: 'kw', created: 30 }, { id: '8', name: 'kw', created: 15 }, { id: '7', name: 'kw', created: 20 }],
+      [{ id: '4', name: 'kw2', created: 5 }, { id: '1', name: 'kw', created: 10 }],
+    ])
+
+    svc.init();
+
+    await Promise.resolve();
+    jest.advanceTimersByTime(REQUEST_FREQ);
     await Promise.resolve();
 
-    // At this point sendNotifications SHOULD NOT have been called 
+    expect(sendSpy).toHaveBeenCalledTimes(1);
+    jest.spyOn(svc, 'getWatches').mockImplementation(() => [{ email: 'test@example.com', keywords: ['kw', 'kw2'], subscription: null }]);
+
+    jest.advanceTimersByTime(REQUEST_FREQ);
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(sendSpy).toHaveBeenCalledTimes(1);
+
+    jest.advanceTimersByTime(REQUEST_FREQ);
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(sendSpy).toHaveBeenCalledTimes(2);
+
+  })
+
+  it("should send notifications for multiple emails with multiple different keywords", async () => {
+    const ms = new MercariService();
+    const svc = new AppService(ms);
+    jest.spyOn(svc, 'createWatchesIfNotExist').mockImplementation(() => {});
+    jest.spyOn(svc, 'getWatches').mockImplementation(() => [{ email: 'test@example.com', keywords: ['kw', 'kw1', 'kw2'], subscription: null }, { email: 'test1@example.com', keywords: ['kw', 'kw3'], subscription: null }]);
+    const sendSpy = jest.spyOn(svc as any, 'sendNotifications').mockImplementation(() => {});
+
+    createListingsMocks(ms, [
+      [{ id: '1', name: 'kw', created: 10 }],
+      [{ id: '2', name: 'kw1', created: 10 }],
+      [{ id: '3', name: 'kw2', created: 10 }],
+      [{ id: '4', name: 'kw3', created: 10 }],
+      [{ id: '1', name: 'kw', created: 10 }, { id: '6', name: 'kw', created: 15 }],
+      [{ id: '2', name: 'kw1', created: 10 }, { id: '7', name: 'kw1', created: 15 }],
+      [{ id: '3', name: 'kw2', created: 10 }, { id: '8', name: 'kw2', created: 5 }],
+      [{ id: '4', name: 'kw3', created: 10 }],
+      [{ id: '1', name: 'kw', created: 10 }, { id: '6', name: 'kw', created: 15 }],
+      [{ id: '2', name: 'kw1', created: 10 }, { id: '7', name: 'kw1', created: 15 }, { id: '9', name: 'kw1', created: 15 }],
+      [{ id: '3', name: 'kw2', created: 10 }, { id: '8', name: 'kw2', created: 5 }],
+      [{ id: '4', name: 'kw3', created: 10 }],
+    ])
+
+    svc.init();
+
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    jest.advanceTimersByTime(REQUEST_FREQ);
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(sendSpy).toHaveBeenCalledTimes(2);
+
+    jest.advanceTimersByTime(REQUEST_FREQ);
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(sendSpy).toHaveBeenCalledTimes(3);
+
+  })
+
+  it("should send notifications for multiple emails with different keywords", async () => {
+    const ms = new MercariService();
+    const svc = new AppService(ms);
+    jest.spyOn(svc, 'createWatchesIfNotExist').mockImplementation(() => {});
+    jest.spyOn(svc, 'getWatches').mockImplementation(() => [{ email: 'test@example.com', keywords: ['kw'], subscription: null }, { email: 'test1@example.com', keywords: ['kw2'], subscription: null }]);
+    const sendSpy = jest.spyOn(svc as any, 'sendNotifications').mockImplementation(() => {});
+
+    createListingsMocks(ms, [
+      [{ id: '1', name: 'kw', created: 10 }],
+      [{ id: '2', name: 'kw2', created: 10 }],
+      [{ id: '1', name: 'kw', created: 10 }, { id: '3', name: 'kw', created: 15 }],
+      [{ id: '2', name: 'kw2', created: 10 }, { id: '4', name: 'kw2', created: 15 }]
+    ])
+
+    svc.init();
+
+    await Promise.resolve();
+    await Promise.resolve();
+    jest.advanceTimersByTime(REQUEST_FREQ);
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(sendSpy).toHaveBeenCalledTimes(2);
+  })
+
+  it("should send notifications for multiple emails with the same keyword", async () => {
+    const ms = new MercariService();
+    const svc = new AppService(ms);
+    jest.spyOn(svc, 'createWatchesIfNotExist').mockImplementation(() => {});
+    jest.spyOn(svc, 'getWatches').mockImplementation(() => [{ email: 'test@example.com', keywords: ['kw'], subscription: null }, { email: 'test1@example.com', keywords: ['kw'], subscription: null }]);
+    const sendSpy = jest.spyOn(svc as any, 'sendNotifications').mockImplementation(() => {});
+
+    createListingsMocks(ms, [
+      [{ id: '1', name: 'a', created: 10 }],
+      [{ id: '1', name: 'a', created: 10 }, { id: '2', name: 'c', created: 15 }]
+    ])
+
+    svc.init();
+
+    await Promise.resolve();
+    jest.advanceTimersByTime(REQUEST_FREQ);
+    await Promise.resolve();
+
+    expect(sendSpy).toHaveBeenCalledTimes(2);
+  })
+
+  it("should not send notifications for an old id that appear because new ids were delisted", async () => {
+    const ms = new MercariService();
+    const svc = new AppService(ms);
+    jest.spyOn(svc, 'createWatchesIfNotExist').mockImplementation(() => {});
+    jest.spyOn(svc, 'getWatches').mockImplementation(() => [{ email: 'test@example.com', keywords: ['kw'], subscription: null }]);
+    const sendSpy = jest.spyOn(svc as any, 'sendNotifications').mockImplementation(() => {});
+
+    createListingsMocks(ms, [
+      [{ id: '1', name: 'kw', created: 10 }, { id: '2', name: 'b', created: 5 }],
+      [{ id: '1', name: 'kw', created: 10 }, { id: '3', name: 'c', created: 1 }],
+      [{ id: '1', name: 'kw', created: 10 }, { id: '4', name: 'd', created: 15 }],
+    ])
+
+    svc.init();
+
+    await Promise.resolve();
     expect(sendSpy).toHaveBeenCalledTimes(0);
 
-    // cleanup timers
-    jest.clearAllTimers();
+    jest.advanceTimersByTime(REQUEST_FREQ);
+    await Promise.resolve();
+
+    expect(sendSpy).toHaveBeenCalledTimes(0);
+    jest.advanceTimersByTime(REQUEST_FREQ);
+    await Promise.resolve();
+
+    expect(sendSpy).toHaveBeenCalledTimes(1);
+  })
+
+  it("should skip because prior search is in progress", async () => {
+    const ms = new MercariService();
+    const svc = new AppService(ms);
+    jest.spyOn(svc, 'createWatchesIfNotExist').mockImplementation(() => {});
+    jest.spyOn(svc, 'getWatches').mockImplementation(() => [{ email: 'test@example.com', keywords: ['kw'], subscription: null }]);
+    const sendSpy = jest.spyOn(svc, 'sendNotifications').mockImplementation(() => {});
+    const SHORT_DELAY = REQUEST_FREQ * 0.25;
+
+    jest.spyOn(ms, 'getLatestListings')
+    .mockImplementationOnce(() => new Promise(resolve => setTimeout(() => resolve([{ id: '1', name: 'a', created: 0 }, { id: '2', name: 'b', created: 10 }]), REQUEST_FREQ + (SHORT_DELAY * 2))))
+    .mockImplementationOnce(() => new Promise(resolve => setTimeout(() => resolve([{ id: '1', name: 'a', created: 0 }, ]), SHORT_DELAY)));
+
+    svc.init();
+
+    jest.advanceTimersByTime(REQUEST_FREQ + SHORT_DELAY);
+    await Promise.resolve();
+
+    jest.advanceTimersByTime(SHORT_DELAY);
+    await Promise.resolve();
+
+    expect(sendSpy).toHaveBeenCalledTimes(0);
   });
 });
