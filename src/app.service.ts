@@ -1,6 +1,5 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import * as fs from 'node:fs';
-import getLatestListings from './util/mercari-service/mercari.service';
 import * as nodemailer from 'nodemailer';
 import { Watch } from './app.interfaces';
 import SMTPTransport from 'nodemailer/lib/smtp-transport';
@@ -10,6 +9,7 @@ import * as webPush from 'web-push';
 import { GlobalService } from './global.service';
 import { exportJWK, generateKeyPair, SignJWT } from 'jose';
 import { v4 as uuid } from "uuid";
+import { MercariService } from './util/mercari-service/mercari.service';
 
 @Injectable()
 export class AppService implements OnModuleInit {
@@ -19,6 +19,8 @@ export class AppService implements OnModuleInit {
   private transporter?: nodemailer.Transporter<SMTPTransport.SentMessageInfo>;
   private config?: Config;
   private desktopNotificationsEnabled = false;
+
+  constructor(private readonly mercariService: MercariService) {}
 
   async onModuleInit() {
     this.config = GlobalService.config;
@@ -262,7 +264,7 @@ export class AppService implements OnModuleInit {
           const watchMatches: SimpleMercariItem[] = [];
 
           for (const keyword of watch.keywords) {
-            const listings = await getLatestListings(keyword);
+            const listings = await this.mercariService.getLatestListings(keyword);
 
             const oldListings = listings.filter((item) => this.seenIDs.includes(item.id)); // everything we've seen before for this search term
             const newListings = listings.filter((item) => !this.seenIDs.includes(item.id)); // everything we haven't seen for this search term
