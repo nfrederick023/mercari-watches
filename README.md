@@ -1,10 +1,11 @@
-# JP Mercari Email Alerts & Notifications Bot (Mercari Watches)
+# Mercari Watches
+### JP Mercari Email Alerts & Notifications Bot 
 
 Mercari Watches is a self-hosted JP Mercari email alert bot that sends email notifications and browser push notifications when new listings appear for your chosen search keywords.
 
 If you're outside Japan, JP Mercari does not allow you to create an account. Which means you cannot use their built-in notification system.
 
-This tool solves that problem by automatically monitoring JP Mercari listings and sending real-time email alerts when new items are posted.
+This tool solves that problem by automatically monitoring JP Mercari listings and sending email alerts when new items are posted.
 
 ### What does Mercari Watches do?
 
