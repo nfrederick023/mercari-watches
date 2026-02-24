@@ -4,6 +4,7 @@ import { AppModule } from './app.module';
 import * as basicAuth from 'express-basic-auth';
 import { readConfig } from './util/read-config';
 import { GlobalService } from './global.service';
+import { AppService } from './app.service';
 
 async function bootstrap() {
   GlobalService.config = readConfig();
@@ -76,6 +77,8 @@ async function bootstrap() {
 
   }
 
+  await app.get(AppService).init();   
   await app.listen(3080);
+
 }
 bootstrap();

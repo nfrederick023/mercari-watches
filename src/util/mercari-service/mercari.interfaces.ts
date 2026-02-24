@@ -62,8 +62,8 @@ interface MercariSearchItem {
   status: "ITEM_STATUS_ON_SALE" | "ITEM_STATUS_SOLD_OUT",
   name: string;
   price: string;
-  created: string;
-  updated: string;
+  created: number;
+  updated: number;
   thumbnails: string[];
   itemType: string;
   itemConditionId: string;
@@ -81,4 +81,9 @@ interface MercariSearchItem {
 export interface SimpleMercariItem {
   id: string;
   name: string;
+  created: number;
+}
+
+export interface WatchMatch extends SimpleMercariItem {
+  keyword: string;
 }

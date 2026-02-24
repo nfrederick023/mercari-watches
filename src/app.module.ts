@@ -5,6 +5,7 @@ import { AppMiddleware } from './app.middleware';
 import { AppService } from './app.service';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import * as path from 'node:path';
+import { MercariService } from './util/mercari-service/mercari.service';
 
 @Module({
   imports: [
@@ -14,7 +15,7 @@ import * as path from 'node:path';
     })
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, MercariService],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
