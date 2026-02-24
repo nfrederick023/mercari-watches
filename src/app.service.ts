@@ -176,8 +176,6 @@ export class AppService {
   }
 
   createWatchesIfNotExist(): void {
-    this.resetSeenIDs();
-
     if (!this.doesDataExist()) {
       this.createDataDirectory();
     }
@@ -272,7 +270,7 @@ export class AppService {
         const keywords = watches.map(watch => watch.keywords).flat();
 
         // if the number of watches changes, reset the seenIDs to refresh the search
-        if(this.seenIDs.size !== 0 && this.keywords.toString() != keywords.toString()){
+        if(this.seenIDs.size !== 0 && this.keywords.toString() !== keywords.toString()){
           console.log("Watch change detected. Searches will be refreshed.");
           this.resetSeenIDs();
         }
@@ -338,7 +336,7 @@ export class AppService {
       }
     };
 
-    iterate();
+    setTimeout(iterate, 1000); 
     setInterval(iterate, frequency);
   }
 }
