@@ -22,6 +22,9 @@ export interface Config {
       privateKey?: string;
     }
   }
+  discordNotificationConfig?: {
+    webhookUrl?: string;
+  }
   verboseLogging?: boolean;
   requestFrequencyMS?: number;
   requestDelayMS?: number;

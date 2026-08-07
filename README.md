@@ -1,7 +1,7 @@
 # Mercari Watches
 ### JP Mercari Email Alerts & Notifications Bot 
 
-Mercari Watches is a self-hosted JP Mercari email alert bot that sends email notifications and browser push notifications when new listings appear for your chosen search keywords.
+Mercari Watches is a self-hosted JP Mercari email alert bot that sends email, browser and Discord notifications when new listings appear for your chosen search keywords.
 
 If you're outside Japan, JP Mercari does not allow you to create an account. Which means you cannot use their built-in notification system.
 
@@ -11,7 +11,7 @@ This tool solves that problem by automatically monitoring JP Mercari listings an
 
 - Searches JP Mercari for specific keywords
 - Detects new listings
-- Sends email alerts and browser push notifications
+- Sends email, browser and Discord Webhook notifications
 - Works without a Mercari account
 
 ## Getting Started
@@ -48,7 +48,7 @@ Mercari Watches uses two JSON files for configuration and user data management.
 - `config.json` - For application configuration (e.g. API keys, email auth)
 - `watches.json` - For persisting user data (e.g. search terms, subscriptions)
 
-`watches.json` is automatically generated and managed by the application. Ideally you'd only interact with this file when migrating systems, backing up/restoring data or for development. This file can be edited safely on fly; however, this is discouraged. The file is created and found in the same directory as `config.json`.
+`watches.json` is automatically generated and managed by the application. Ideally you'd only interact with this file when migrating systems, backing up/restoring data, or for development. This file can be edited safely on fly; however, this is discouraged. The file is created and found in the same directory as `config.json`.
 
 `config.json` must be created and managed by you. Whilst the file itself (and every parameter therein) is technically **optional**, a correct configuration file is mandatory in order to secure API endpoints, send email notifications, and create browser notifications. The `config.json` should be located at the `[appDir]/data/config.json` directory, and within it you can configure the following options:
 
@@ -71,6 +71,8 @@ Mercari Watches uses two JSON files for configuration and user data management.
   - `vapidKeys` - VAPID specification credentials.
     - `publicKey` - VAPID public key.
     - `privateKey` - VAPID private key.
+- `discordNotificationConfig` - Configuration for Discord notifications.
+  - `webhookUrl` - The Discord webhook URL.
 - `requestFrequencyMS` - How often the application checks for new items. If unspecified, the default is 90000. The minimum is 30000.
 - `requestDelayMS` - The delay between each individual request to Mercari. If unspecified, the default is 1000.
 - `requestPages` - How many pages should be considered per request. If unspecified, the default is 3.

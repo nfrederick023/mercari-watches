@@ -21,6 +21,9 @@
       "privateKey": "private_vapid_key"
     }
   },
+  "discordNotificationConfig": {
+    "webhookUrl": "https://change.me/discord-webhook-url"
+  },
   "requestFrequencyMS": 90000,
   "requestDelayMS": 1000,
   "requestPages": 3,

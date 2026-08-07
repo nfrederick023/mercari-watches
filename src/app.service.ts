@@ -4,10 +4,11 @@ import * as nodemailer from 'nodemailer';
 import { Watch } from './app.interfaces';
 import SMTPTransport from 'nodemailer/lib/smtp-transport';
 import { Config } from './util/read-config';
-import { SimpleMercariItem, WatchMatch } from './util/mercari-service/mercari.interfaces';
+import { WatchMatch } from './util/mercari-service/mercari.interfaces';
 import * as webPush from 'web-push';
 import { GlobalService } from './global.service';
 import { MercariService } from './util/mercari-service/mercari.service';
+import {EmbedBuilder, WebhookClient} from "discord.js";
 
 @Injectable()
 export class AppService {
@@ -19,6 +20,7 @@ export class AppService {
   private desktopNotificationsEnabled = false;
   private running = false;
   private keywords: string[] = [];
+  private webhookClient: WebhookClient;
 
   constructor(private readonly mercariService: MercariService) {}
 
@@ -61,6 +63,14 @@ export class AppService {
         });
       } else {
         console.warn("No configuration found for email notifications. Email notifications are disabled.")
+      }
+
+      const webhookUrl = this.config.discordNotificationConfig?.webhookUrl;
+
+      if (webhookUrl) {
+        this.webhookClient = new WebhookClient({url: webhookUrl});
+      } else {
+        console.warn("No configuration found for Discord notifications. Discord notifications are disabled.")
       }
 
       this.triggerWatchService();
@@ -236,6 +246,14 @@ export class AppService {
         }
       });
     }
+    if(this.webhookClient)
+    {
+      const embed = new EmbedBuilder().setTitle("Mercari Watches: New Items are Avaliable!").setDescription(text).setColor(0xF1050F);
+      this.webhookClient.send({
+        username: "Mercari Watches",
+        embeds: [embed]
+      })
+    }
   }
 
   resetSeenIDs(): void {
@@ -303,7 +321,6 @@ export class AppService {
 
           // find new items relative to the seenIDs and their created dates
           const newListings = listings.filter((item) => !this.seenIDs.has(item.id) && item.created > (newestSeenListing?.created ?? 0));
-
           // notify only if we have previously seen state (not on start-up or search refresh) 
           // and when at least one new listing was found
           if (this.seenIDs.size && newListings.length > 0) {
