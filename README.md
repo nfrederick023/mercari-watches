@@ -71,8 +71,7 @@ Mercari Watches uses two JSON files for configuration and user data management.
   - `vapidKeys` - VAPID specification credentials.
     - `publicKey` - VAPID public key.
     - `privateKey` - VAPID private key.
-- `discordNotificationConfig` - Configuration for Discord notifications.
-  - `webhookUrl` - The Discord webhook URL.
+- `discordNotificationsEnabled` - Should Discord notifications be sent.
 - `requestFrequencyMS` - How often the application checks for new items. If unspecified, the default is 90000. The minimum is 30000.
 - `requestDelayMS` - The delay between each individual request to Mercari. If unspecified, the default is 1000.
 - `requestPages` - How many pages should be considered per request. If unspecified, the default is 3.
@@ -102,11 +101,13 @@ By default the application is exposed on port `3080`. This can be changed in the
 Note: When the `apiCredentails` is configured in `config.json`, all API requests will need to be authenticated using Basic authentication. This will be handled automatically when using the Swagger.
 
 | Endpoint                | Method | Description                                                                                                     | Notes                       |
-| :---------------------- | :----- | :-------------------------------------------------------------------------------------------------------------- | --------------------------- |
+|:------------------------| :----- |:----------------------------------------------------------------------------------------------------------------| --------------------------- |
 | /getWatches             | GET    | Returns the entirety of the `watches.json` file.                                                                |                             |
 | /createWatch            | POST   | Adds a new watch entry in the `watches.json` file with no search keywords or subscriptions for the given email. |                             |
 | /addKeywordToWatch      | PUT    | Adds a new search keyword to the given email.                                                                   |                             |
 | /removeKeywordFromWatch | PUT    | Removes a search keyword from the given email.                                                                  |                             |
+| /addWebhookToWatch      | PUT    | Adds Discord webhook URL to the given email.                                                                    |                             |
+| /removeWebhookFromWatch | PUT    | Removes Discord webhook URL from the given email.                                                               |                             |
 | /setKeywordsOfWatch     | PUT    | Replaces all of the search keywords for the given email with a new list of search keywords.                     |                             |
 | /removeWatch            | DELETE | Removes any watch entries from the `watches.json` file matching the given email.                                |                             |
 | /resetWatches           | DELETE | Removes all data from the `watches.json` file and resets the file to its intial state.                          |                             |
@@ -122,6 +123,9 @@ Note: When the `apiCredentails` is configured in `config.json`, all API requests
 5. Use `/subscribe` to recieve all browser notifications for the email.
 6. Once a new item is found, the email will recieve a message with links to the item and a browser notification will sent be sent to whomever is subscribed.
 7. Use `/removeWatch` to remove an email from `watches.json` or `/removeKeywordFromWatch` to remove a search keyword.
+
+#### Optional
+8. Use `/addWebhookToWatch` to add a Discord webhook URL to the email.
 
 ## A Note on API Rate Limiting
 

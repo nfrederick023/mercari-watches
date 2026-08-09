@@ -20,7 +20,7 @@ export class AppService {
   private desktopNotificationsEnabled = false;
   private running = false;
   private keywords: string[] = [];
-  private webhookClient: WebhookClient;
+  private discordNotificationsEnabled = false;
 
   constructor(private readonly mercariService: MercariService) {}
 
@@ -65,10 +65,8 @@ export class AppService {
         console.warn("No configuration found for email notifications. Email notifications are disabled.")
       }
 
-      const webhookUrl = this.config.discordNotificationConfig?.webhookUrl;
-
-      if (webhookUrl) {
-        this.webhookClient = new WebhookClient({url: webhookUrl});
+      if (this.config?.discordNotificationsEnabled) {
+        this.discordNotificationsEnabled = true;
       } else {
         console.warn("No configuration found for Discord notifications. Discord notifications are disabled.")
       }
@@ -93,7 +91,8 @@ export class AppService {
     const watch: Watch = {
       email,
       keywords: [],
-      subscription: null
+      subscription: null,
+      webhookUrl: null
     };
 
     watches.push(watch);
@@ -145,6 +144,24 @@ export class AppService {
     watches[watchIndex].keywords = watches[watchIndex].keywords.filter(
       (keyword) => keyword !== keywordToRemove,
     );
+    this.saveWatches(watches);
+  }
+
+  addWebhookToWatch(emailOfWatch: string, webhook: string): void {
+    const watches = this.getWatches();
+    const watchIndex = watches.findIndex(
+        (watch) => watch.email === emailOfWatch,
+    );
+    watches[watchIndex].webhookUrl = webhook;
+    this.saveWatches(watches);
+  }
+
+  removeWebhookFromWatch(emailOfWatch: string): void {
+    const watches = this.getWatches();
+    const watchIndex = watches.findIndex(
+        (watch) => watch.email === emailOfWatch,
+    );
+    watches[watchIndex].webhookUrl = null;
     this.saveWatches(watches);
   }
 
@@ -246,13 +263,15 @@ export class AppService {
         }
       });
     }
-    if(this.webhookClient)
+    if(this.discordNotificationsEnabled && watch.webhookUrl)
     {
       const embed = new EmbedBuilder().setTitle("Mercari Watches: New Items are Avaliable!").setDescription(text).setColor(0xF1050F);
-      this.webhookClient.send({
+      const webhookClient = new WebhookClient({url: watch.webhookUrl})
+      webhookClient.send({
         username: "Mercari Watches",
         embeds: [embed]
-      })
+      });
+      webhookClient.destroy();
     }
   }
 
