@@ -35,6 +35,17 @@ export class AppController {
     return this.appService.removeKeywordFromWatch(email, keyword);
   }
 
+  @Put("addWebhookToWatch")
+  addWebhookToWatch(@Query('email') email: string, @Query('webhook') webhook: string): void {
+    return this.appService.addWebhookToWatch(email, webhook);
+  }
+
+  @Put("removeWebhookFromWatch")
+  removeWebhookFromWatch(@Query('email') email: string): void {
+    return this.appService.removeWebhookFromWatch(email);
+  }
+
+
   @Put("setKeywordsOfWatch")
   setKeywordsOfWatch(@Query('email') email: string, @Query('keywords') keywords: string[]): void {
     return this.appService.setKeywordsOfWatch(email, typeof keywords === "string" ? [keywords] : keywords);

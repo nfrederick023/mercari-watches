@@ -22,6 +22,7 @@ export interface Config {
       privateKey?: string;
     }
   }
+  discordNotificationsEnabled?: boolean;
   verboseLogging?: boolean;
   requestFrequencyMS?: number;
   requestDelayMS?: number;

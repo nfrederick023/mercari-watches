@@ -21,6 +21,7 @@
       "privateKey": "private_vapid_key"
     }
   },
+  "discordNotificationsEnabled": false,
   "requestFrequencyMS": 90000,
   "requestDelayMS": 1000,
   "requestPages": 3,

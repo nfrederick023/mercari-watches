@@ -4,10 +4,11 @@ import * as nodemailer from 'nodemailer';
 import { Watch } from './app.interfaces';
 import SMTPTransport from 'nodemailer/lib/smtp-transport';
 import { Config } from './util/read-config';
-import { SimpleMercariItem, WatchMatch } from './util/mercari-service/mercari.interfaces';
+import { WatchMatch } from './util/mercari-service/mercari.interfaces';
 import * as webPush from 'web-push';
 import { GlobalService } from './global.service';
 import { MercariService } from './util/mercari-service/mercari.service';
+import {EmbedBuilder, WebhookClient} from "discord.js";
 
 @Injectable()
 export class AppService {
@@ -19,6 +20,7 @@ export class AppService {
   private desktopNotificationsEnabled = false;
   private running = false;
   private keywords: string[] = [];
+  private discordNotificationsEnabled = false;
 
   constructor(private readonly mercariService: MercariService) {}
 
@@ -63,6 +65,12 @@ export class AppService {
         console.warn("No configuration found for email notifications. Email notifications are disabled.")
       }
 
+      if (this.config?.discordNotificationsEnabled) {
+        this.discordNotificationsEnabled = true;
+      } else {
+        console.warn("No configuration found for Discord notifications. Discord notifications are disabled.")
+      }
+
       this.triggerWatchService();
     }
   }
@@ -83,7 +91,8 @@ export class AppService {
     const watch: Watch = {
       email,
       keywords: [],
-      subscription: null
+      subscription: null,
+      webhookUrl: null
     };
 
     watches.push(watch);
@@ -135,6 +144,24 @@ export class AppService {
     watches[watchIndex].keywords = watches[watchIndex].keywords.filter(
       (keyword) => keyword !== keywordToRemove,
     );
+    this.saveWatches(watches);
+  }
+
+  addWebhookToWatch(emailOfWatch: string, webhook: string): void {
+    const watches = this.getWatches();
+    const watchIndex = watches.findIndex(
+        (watch) => watch.email === emailOfWatch,
+    );
+    watches[watchIndex].webhookUrl = webhook;
+    this.saveWatches(watches);
+  }
+
+  removeWebhookFromWatch(emailOfWatch: string): void {
+    const watches = this.getWatches();
+    const watchIndex = watches.findIndex(
+        (watch) => watch.email === emailOfWatch,
+    );
+    watches[watchIndex].webhookUrl = null;
     this.saveWatches(watches);
   }
 
@@ -236,6 +263,16 @@ export class AppService {
         }
       });
     }
+    if(this.discordNotificationsEnabled && watch.webhookUrl)
+    {
+      const embed = new EmbedBuilder().setTitle("Mercari Watches: New Items are Avaliable!").setDescription(text).setColor(0xF1050F);
+      const webhookClient = new WebhookClient({url: watch.webhookUrl})
+      webhookClient.send({
+        username: "Mercari Watches",
+        embeds: [embed]
+      });
+      webhookClient.destroy();
+    }
   }
 
   resetSeenIDs(): void {
@@ -303,7 +340,6 @@ export class AppService {
 
           // find new items relative to the seenIDs and their created dates
           const newListings = listings.filter((item) => !this.seenIDs.has(item.id) && item.created > (newestSeenListing?.created ?? 0));
-
           // notify only if we have previously seen state (not on start-up or search refresh) 
           // and when at least one new listing was found
           if (this.seenIDs.size && newListings.length > 0) {
