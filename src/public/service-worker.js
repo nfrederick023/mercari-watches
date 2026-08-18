@@ -1,9 +1,9 @@
-self.addEventListener('push', (event) => {
+self.addEventListener("push", (event) => {
   const data = event.data.json();
   const options = {
     body: data.body,
-    badge: '/public/mercari.png',
-    icon: '/public/mercari.png',
+    badge: "/public/mercari.png",
+    icon: "/public/mercari.png",
     data: {
       url: data.url,  // Pass the URL in the notification data
     },
@@ -14,7 +14,7 @@ self.addEventListener('push', (event) => {
   );
 });
 
-self.addEventListener('notificationclick', function (event) {
+self.addEventListener("notificationclick", function (event) {
   event.notification.close();  // Close the notification
 
   // Open the URL

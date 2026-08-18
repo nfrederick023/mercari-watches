@@ -1,13 +1,13 @@
-window.addEventListener('load', async () => {
+window.addEventListener("load", async () => {
 
-  const registration = await navigator.serviceWorker.register('/public/service-worker.js')
+  const registration = await navigator.serviceWorker.register("/public/service-worker.js")
   registration.update();
   const originalFetch = window.fetch;
   window.fetch = async function (...args) {
     if (args[0]?.includes("/subscribe")) {
 
       const permission = await Notification.requestPermission();
-      if (permission === 'granted') {
+      if (permission === "granted") {
         const subscription = await registration.pushManager.subscribe({
           userVisibleOnly: true,
           applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
@@ -26,10 +26,10 @@ window.addEventListener('load', async () => {
 })
 
 function urlBase64ToUint8Array (base64String) {
-  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const padding = "=".repeat((4 - base64String.length % 4) % 4);
   const base64 = (base64String + padding)
-    .replace(/-/g, '+')
-    .replace(/_/g, '/');
+    .replace(/-/g, "+")
+    .replace(/_/g, "/");
 
   const rawData = window.atob(base64);
   const outputArray = new Uint8Array(rawData.length);
