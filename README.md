@@ -71,9 +71,9 @@ Mercari Watches uses two JSON files for configuration and user data management.
   - `vapidKeys` - VAPID specification credentials.
     - `publicKey` - VAPID public key.
     - `privateKey` - VAPID private key.
-- `emailNotificationsEnabled` - Should email notifications be sent.
-- `browserNotificationsEnabled` - Should browser notifications be sent.
-- `discordNotificationsEnabled` - Should Discord notifications be sent.
+- `emailNotificationsEnabled` - Should email notifications be sent. If unspecified, the default is `true`.
+- `browserNotificationsEnabled` - Should browser notifications be sent. If unspecified, the default is `true`.
+- `discordNotificationsEnabled` - Should Discord notifications be sent. If unspecified, the default is `true`.
 - `requestFrequencyMS` - How often the application checks for new items. If unspecified, the default is 90000. The minimum is 30000.
 - `requestDelayMS` - The delay between each individual request to Mercari. If unspecified, the default is 1000.
 - `requestPages` - How many pages should be considered per request. If unspecified, the default is 3.
