@@ -7,7 +7,7 @@
   "emailNotificationConfig": {
     "host": "email.host.net",
     "port": 25,
-    "secure": false,
+    "secure": true,
     "mailFrom": "email@email.com",
     "auth": {
       "user": "user",
@@ -21,7 +21,9 @@
       "privateKey": "private_vapid_key"
     }
   },
-  "discordNotificationsEnabled": false,
+  "emailNotificationsEnabled": true,
+  "browserNotificationsEnabled": true,
+  "discordNotificationsEnabled": true,
   "requestFrequencyMS": 90000,
   "requestDelayMS": 1000,
   "requestPages": 3,

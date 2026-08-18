@@ -1,4 +1,4 @@
-import * as webPush from 'web-push';
+import webPush from 'web-push';
 
 export interface Watch {
   email: string;
@@ -6,5 +6,3 @@ export interface Watch {
   subscription: webPush.PushSubscription | null;
   webhookUrl: string | null;
 }
-
-export type KnownListings = string[];

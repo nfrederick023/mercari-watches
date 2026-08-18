@@ -1,7 +1,7 @@
 # Mercari Watches
 ### JP Mercari Email Alerts & Notifications Bot 
 
-Mercari Watches is a self-hosted JP Mercari email alert bot that sends email, browser and Discord notifications when new listings appear for your chosen search keywords.
+Mercari Watches is a self-hosted JP Mercari email alert bot that sends **email, browser and Discord notifications** when new listings appear for your chosen search keywords.
 
 If you're outside Japan, JP Mercari does not allow you to create an account. Which means you cannot use their built-in notification system.
 
@@ -71,6 +71,8 @@ Mercari Watches uses two JSON files for configuration and user data management.
   - `vapidKeys` - VAPID specification credentials.
     - `publicKey` - VAPID public key.
     - `privateKey` - VAPID private key.
+- `emailNotificationsEnabled` - Should email notifications be sent.
+- `browserNotificationsEnabled` - Should browser notifications be sent.
 - `discordNotificationsEnabled` - Should Discord notifications be sent.
 - `requestFrequencyMS` - How often the application checks for new items. If unspecified, the default is 90000. The minimum is 30000.
 - `requestDelayMS` - The delay between each individual request to Mercari. If unspecified, the default is 1000.
@@ -93,7 +95,7 @@ http://your_server_ip_here/api#/
 ```
 
 <p align="center">
-  <img width="600" alt="image" src="https://github.com/user-attachments/assets/d7b73a87-20a9-4af5-bdd3-a4b38e11d5d5" />
+  <img width="600" alt="image" src="./image.png" />
 </p>
 
 By default the application is exposed on port `3080`. This can be changed in the `docker.compose` file. 
@@ -105,27 +107,26 @@ Note: When the `apiCredentails` is configured in `config.json`, all API requests
 | /getWatches             | GET    | Returns the entirety of the `watches.json` file.                                                                |                             |
 | /createWatch            | POST   | Adds a new watch entry in the `watches.json` file with no search keywords or subscriptions for the given email. |                             |
 | /addKeywordToWatch      | PUT    | Adds a new search keyword to the given email.                                                                   |                             |
-| /removeKeywordFromWatch | PUT    | Removes a search keyword from the given email.                                                                  |                             |
-| /addWebhookToWatch      | PUT    | Adds Discord webhook URL to the given email.                                                                    |                             |
-| /removeWebhookFromWatch | PUT    | Removes Discord webhook URL from the given email.                                                               |                             |
 | /setKeywordsOfWatch     | PUT    | Replaces all of the search keywords for the given email with a new list of search keywords.                     |                             |
-| /removeWatch            | DELETE | Removes any watch entries from the `watches.json` file matching the given email.                                |                             |
-| /resetWatches           | DELETE | Removes all data from the `watches.json` file and resets the file to its intial state.                          |                             |
-| /subscribe              | POST   | Directs all browser notifications for the given email to current the user.                                      | Must be handled in-browser. |
+| /removeKeywordFromWatch | PUT    | Removes a search keyword from the given email.                                                                  |                             |
+| /resetWatches           | PUT    | Removes all data from the `watches.json` file and resets the file to its intial state.                          |                             |
+| /addWebhookToWatch      | PUT    | Adds Discord webhook URL to the given email.                                                                    |                             |
+| /subscribe              | PUT    | Directs all browser notifications for the given email to current the user.                                      | Must be handled in-browser. |
 | /unsubscribe            | PUT    | Removes all browser notifications for the given email.                                                          |                             |
+| /removeWebhookFromWatch | PUT    | Removes Discord webhook URL from the given email.                                                               |                             |
+| /removeWatch            | DELETE | Removes any watch entries from the `watches.json` file matching the given email.                                |                             |
 
 ### The Steps to use Mercari Watches.
 
 1. Navigate to the Swagger.
-2. Use `/createWatch` to add an email to `watches.json`.
+2. Use `/createWatch` to add an email to `watches.json`. If email notifications are disabled, this field can be anything.
 3. Use `/addKeywordToWatch` or `/setKeywordsOfWatch` to add search keywords to the email.
-4. Mercari Watches will now "watch" those keywords for new items.
-5. Use `/subscribe` to recieve all browser notifications for the email.
-6. Once a new item is found, the email will recieve a message with links to the item and a browser notification will sent be sent to whomever is subscribed.
-7. Use `/removeWatch` to remove an email from `watches.json` or `/removeKeywordFromWatch` to remove a search keyword.
+4. Mercari Watches will now automatically "watch" those keywords for new items. Once an item is found, the notifications will be sent.
+5. Use `/removeWatch` to remove an email from `watches.json` or `/removeKeywordFromWatch` to remove a search keyword.
 
 #### Optional
-8. Use `/addWebhookToWatch` to add a Discord webhook URL to the email.
+6. Use `/subscribe` to recieve all browser notifications for the email.
+7. Use `/addWebhookToWatch` to add a Discord webhook URL to the email.
 
 ## A Note on API Rate Limiting
 
