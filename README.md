@@ -111,9 +111,9 @@ Note: When the `apiCredentails` is configured in `config.json`, all API requests
 | /removeKeywordFromWatch | PUT    | Removes a search keyword from the given email.                                                                  |                             |
 | /resetWatches           | PUT    | Removes all data from the `watches.json` file and resets the file to its intial state.                          |                             |
 | /addWebhookToWatch      | PUT    | Adds Discord webhook URL to the given email.                                                                    |                             |
+| /removeWebhookFromWatch | PUT    | Removes Discord webhook URL from the given email.                                                               |                             |
 | /subscribe              | PUT    | Directs all browser notifications for the given email to current the user.                                      | Must be handled in-browser. |
 | /unsubscribe            | PUT    | Removes all browser notifications for the given email.                                                          |                             |
-| /removeWebhookFromWatch | PUT    | Removes Discord webhook URL from the given email.                                                               |                             |
 | /removeWatch            | DELETE | Removes any watch entries from the `watches.json` file matching the given email.                                |                             |
 
 ### The Steps to use Mercari Watches.
